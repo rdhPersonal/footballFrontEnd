@@ -1,0 +1,122 @@
+---
+description: Project architecture, directory structure, and import boundary rules
+alwaysApply: true
+---
+
+# Project Architecture
+
+## Overview
+
+This is a **fantasy football** application built with **Next.js (App Router)** deployed on **Vercel**. The backend is a separate AWS codebase providing APIs. This repo owns the frontend UI, the design system, and a thin BFF (Backend for Frontend) layer via Next.js Route Handlers.
+
+**This is a single-repo, single-package project.** There is no monorepo, no Turborepo, no workspaces. One `package.json`, one `next build`, one deploy. The design system is colocated as a directory (`src/design-system/`), not a separate package.
+
+## Server Components vs. Client Components
+
+Next.js App Router uses **Server Components by default** (SSR). This affects how the codebase is structured:
+
+- **Server Components** (default — no directive needed):
+  - `src/app/*/page.tsx` — page-level components that fetch data and pass it as props
+  - `src/app/*/layout.tsx` — layouts that wrap pages
+  - Any component that only renders HTML from props with no interactivity
+
+- **Client Components** (require `'use client'` at top of file):
+  - Most `src/design-system/` components — anything using `useState`, `useEffect`, `useRef`, event handlers (`onClick`, `onChange`), or browser APIs
+  - `src/features/` hooks that use React state or effects
+
+- **The boundary pattern:**
+  ```tsx
+  // src/app/players/page.tsx — Server Component (fetches data)
+  import { PlayerTable } from '@/design-system';
+
+  export default async function PlayersPage() {
+    const players = await fetchPlayers();  // Server-side fetch, no loading spinner
+    return <PlayerTable players={players} />;  // Pass data as props to client component
+  }
+
+  // src/design-system/data-display/PlayerTable.tsx — Client Component (interactive)
+  'use client';
+  export function PlayerTable({ players }: PlayerTableProps) {
+    const [sortBy, setSortBy] = useState('points');  // Client-side interactivity
+    // ...
+  }
+  ```
+
+- **Rule:** Place `'use client'` as high as needed but as low as possible. Don't make a whole page a Client Component when only one child needs interactivity.
+
+## Directory Structure
+
+```
+src/
+├── app/                      # Next.js App Router — pages, layouts, API routes
+│   ├── layout.tsx            # Root layout (providers, fonts, global styles)
+│   ├── page.tsx              # Home / dashboard page
+│   ├── (auth)/               # Auth route group (login, callback, logout)
+│   ├── roster/               # /roster — lineup management
+│   ├── matchups/             # /matchups — weekly matchup views
+│   ├── players/              # /players — player search, stats, rankings
+│   ├── waivers/              # /waivers — waiver wire
+│   ├── trades/               # /trades — trade proposals
+│   └── api/                  # BFF Route Handlers (see bff.mdc)
+│       ├── auth/             # Cognito session endpoints (TBD)
+│       ├── players/          # Proxy to AWS player data APIs
+│       └── league/           # Proxy to AWS league APIs
+├── design-system/            # Reusable UI components and tokens (library code)
+│   ├── primitives/           # Button, IconButton, Badge, Avatar, Input, Select, Toggle, Tooltip, Divider, Skeleton
+│   ├── player/               # PlayerMiniCard, PlayerCardCompact, PlayerCardDetailed, PlayerStatRow, PlayerCompareTray
+│   ├── data-display/         # StatTable, StatBar, StatSparkline, ScoreIndicator, RankBadge, MatchupDifficulty, EmptyState
+│   ├── layout/               # Card, Modal, Tabs, Sidebar, TopNav, PageLayout, Section
+│   ├── fantasy/              # LineupSlot, RosterGrid, MatchupCard, WaiverCard, WeekSelector (ScoreboardTicker, TradeBlock deferred)
+│   ├── tokens/               # Color, typography, spacing token exports
+│   └── index.ts              # Public API — barrel export (the ONLY import point)
+├── features/                 # App-specific feature logic (not pages, not design system)
+│   ├── auth/                 # Auth hooks, session helpers (implementation TBD)
+│   ├── roster/               # Roster management hooks and logic
+│   ├── players/              # Player search, filtering, sorting hooks
+│   └── matchups/             # Matchup comparison logic
+├── lib/                      # Shared utilities
+│   ├── api-client.ts         # Typed fetch wrapper for BFF endpoints
+│   └── constants.ts          # App-wide constants
+└── types/                    # Shared TypeScript types
+    ├── player.ts             # Player, PlayerStats, Position
+    └── league.ts             # League, Roster, Matchup
+```
+
+## Design System First (CRITICAL)
+
+All UI work starts in the design system. This is the workflow for any visual change:
+
+1. **New UI element?** Build the component in `src/design-system/` first. Write tests (TDD). Add a Storybook story. Export from the barrel file. Only THEN consume it from `src/app/`.
+2. **Modifying an existing UI element?** Change it in `src/design-system/` first. Update tests. Verify in Storybook. The app pages automatically pick up the change.
+3. **Never build a one-off UI component directly in `src/app/`.** If it's visual and reusable, it belongs in the design system. If it's truly page-specific layout glue, it can live in the page file — but the building blocks it uses must come from the design system.
+
+This ensures the design system is always the source of truth for how things look and behave.
+
+## Import Boundary Rules (CRITICAL)
+
+1. **`design-system/` is a self-contained library.** It NEVER imports from `app/`, `features/`, `lib/`, or `types/` outside its own directory.
+
+2. **App code imports ONLY from `design-system/index.ts`** (the barrel file).
+   ```typescript
+   // ✅ CORRECT
+   import { Button, PlayerCardCompact, StatTable } from '@/design-system';
+
+   // ❌ WRONG — reaching into internal paths
+   import { Button } from '@/design-system/primitives/Button';
+   ```
+
+3. **The design system NEVER imports:**
+   - App state, contexts, or providers
+   - Next.js routing (`next/navigation`, `next/router`)
+   - API clients or data-fetching logic
+   - Feature-specific business logic
+
+4. **Design system components receive data via props only.** They are pure, presentational, and app-agnostic.
+
+5. **`features/` contains app logic but not UI.** Features export hooks and utilities. Pages in `app/` compose features with design-system components.
+
+## Codebase Separation
+
+- **This repo:** UI, design system, BFF proxy layer, client-side state/caching.
+- **AWS backend repo (separate):** API endpoints, business logic, database, Cognito User Pool config.
+- The BFF layer in `src/app/api/` is intentionally **thin** — it proxies, authenticates, and aggregates. Real business logic lives in the AWS backend.

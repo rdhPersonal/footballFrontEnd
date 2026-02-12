@@ -1,0 +1,80 @@
+---
+description: Design tokens — color palette, typography, shadows, and spacing for the brew/vegas theme
+globs: "**/*.tsx,**/*.ts,**/tailwind.config.*"
+alwaysApply: false
+---
+
+# Design Tokens: Witches Brew x Vegas Class
+
+The visual identity is a dark, moody base (the brew) with luxurious metallic and jewel-tone accents (the Vegas). Think high-roller lounge meets enchanted apothecary — not gaudy neon, but velvet-rope sophistication.
+
+## Color Palette
+
+### Brew (Dark Neutrals — surfaces, text, borders)
+
+| Token | Hex | Role |
+|---|---|---|
+| `brew-950` | `#0a0a0f` | Deepest background (page bg) |
+| `brew-900` | `#12111a` | Card/surface background |
+| `brew-800` | `#1c1a27` | Elevated surface (modals, dropdowns) |
+| `brew-700` | `#2a2738` | Borders, subtle dividers |
+| `brew-600` | `#3d3952` | Muted text, disabled states |
+| `brew-400` | `#8b85a1` | Secondary text |
+| `brew-200` | `#d0cde0` | Primary body text |
+| `brew-50` | `#f0eef5` | Headings, high-emphasis text |
+
+### Vegas (Accents — CTAs, status, highlights)
+
+| Token | Hex | Role |
+|---|---|---|
+| `vegas-gold` | `#d4a843` | Primary accent — CTAs, highlights, active states |
+| `vegas-champagne` | `#f5e6c8` | Hover states, subtle gold |
+| `vegas-neon` | `#c24cff` | Secondary accent — alerts, special badges |
+| `vegas-emerald` | `#2dd4a0` | Success, positive stats, upward trends |
+| `vegas-crimson` | `#ef4444` | Danger, negative stats, injuries |
+| `vegas-amber` | `#f59e0b` | Warnings, questionable status |
+
+## Typography
+
+| Font | Use | Package |
+|---|---|---|
+| **Inter** | Headings and body text | `next/font/google` |
+| **JetBrains Mono** | Stat numbers, table data, monospace | `next/font/google` |
+
+### Scale (use Tailwind defaults)
+
+| Class | Size | Use |
+|---|---|---|
+| `text-xs` | 0.75rem | Stat labels, footnotes |
+| `text-sm` | 0.875rem | Table data, secondary info |
+| `text-base` | 1rem | Body text |
+| `text-lg` | 1.125rem | Card titles |
+| `text-xl` | 1.25rem | Section headers |
+| `text-2xl` | 1.5rem | Page titles |
+| `text-4xl` | 2.25rem | Hero numbers, featured stats |
+
+## Shadows & Glows
+
+Define these as custom Tailwind utilities in `tailwind.config.ts`:
+
+| Token | Value | Use |
+|---|---|---|
+| `shadow-brew` | `0 4px 24px rgba(10, 10, 15, 0.6)` | Ambient card shadow |
+| `shadow-gold` | `0 0 20px rgba(212, 168, 67, 0.15)` | Gold glow for featured/highlighted items |
+| `shadow-neon` | `0 0 16px rgba(194, 76, 255, 0.2)` | Accent glow for special elements |
+
+## Border Radius
+
+| Element | Class | Radius |
+|---|---|---|
+| Cards, containers | `rounded-lg` | 8px |
+| Buttons, inputs | `rounded-md` | 6px |
+| Avatars, badges | `rounded-full` | Full circle |
+
+## Interaction Patterns
+
+- **Hover:** Subtle gold border glow — `ring-1 ring-vegas-gold/30`
+- **Focus:** Gold ring — `focus-visible:ring-2 focus-visible:ring-vegas-gold`
+- **Loading:** Skeleton shimmer pulsing `brew-800` to `brew-700`
+- **Transitions:** `transition-all duration-200 ease-in-out` default; `duration-300` for color fades
+- **Dark mode only:** This is inherently a dark-theme system. No light mode.

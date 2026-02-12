@@ -1,0 +1,71 @@
+---
+description: Design system component authoring standards
+globs: "**/design-system/**"
+alwaysApply: false
+---
+
+# Design System Authoring
+
+## Component API Design
+
+- Every component must accept a `className` prop for consumer-side overrides via `tailwind-merge`.
+- Use a `variants` pattern for visual variations — pass variant names as props, not raw classes.
+- Keep prop interfaces minimal — prefer composition over configuration.
+
+```tsx
+// ✅ Composable, accepts className, uses variants
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  children: React.ReactNode;
+  className?: string;
+  // ...rest HTML button props via ComponentPropsWithoutRef
+}
+```
+
+## Accessibility (a11y)
+
+- All interactive components must be keyboard navigable.
+- Use semantic HTML elements (`button`, `nav`, `table`, `th`, `td`) — not divs with click handlers.
+- Include `aria-label` on icon-only buttons and non-text interactive elements.
+- Use Radix UI or React Aria primitives for complex widgets (modals, dropdowns, tooltips).
+- Color alone must never convey meaning — pair with icons or text (e.g., injury status).
+
+## Composition Over Props
+
+- Prefer children/slots over deeply nested prop objects.
+- Build complex components by composing primitives.
+
+```tsx
+// ✅ Composable
+<Card>
+  <Card.Header>
+    <PlayerAvatar src={player.photo} />
+    <Badge variant="position">{player.position}</Badge>
+  </Card.Header>
+  <Card.Body>{/* stats */}</Card.Body>
+</Card>
+
+// ❌ Monolithic prop bag
+<Card header={...} body={...} avatar={...} badge={...} />
+```
+
+## File & Export Rules
+
+- One component per file.
+- Named exports only — no default exports.
+- Every component directory must have an `index.ts` barrel re-exporting its public API.
+- The top-level `design-system/index.ts` re-exports everything consumers need.
+
+## Statefulness
+
+- Design system components are **stateless/controlled** by default.
+- Internal state is acceptable only for UI concerns (open/closed, hover, focus).
+- Data, selection state, and form values are always controlled via props.
+
+## Client Component Directive
+
+- Most design system components will be **Client Components** because they use interactivity (`useState`, `onClick`, etc.).
+- Add `'use client'` at the top of each component file that needs it.
+- Pure display-only components (e.g., a `Badge` that just renders text with styling) can remain Server Components — do NOT add `'use client'` unless the component actually uses client-side APIs.
+- The barrel `index.ts` does NOT need `'use client'` — it only re-exports.

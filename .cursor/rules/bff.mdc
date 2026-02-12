@@ -1,0 +1,60 @@
+---
+description: BFF (Backend for Frontend) route handler patterns
+globs: "**/app/api/**"
+alwaysApply: false
+---
+
+# BFF Route Handlers
+
+The `src/app/api/` directory contains Next.js Route Handlers that serve as a thin **Backend for Frontend** (BFF) layer between the React UI and the AWS backend APIs.
+
+## Principles
+
+1. **Thin proxy.** The BFF forwards requests to AWS APIs. It does NOT contain business logic — that belongs in the AWS backend codebase.
+2. **Server-side secrets.** AWS API keys, service URLs, and auth tokens live in environment variables and NEVER ship to the browser.
+3. **Aggregation.** When a page needs data from multiple AWS endpoints, the BFF can combine them into a single response to reduce client round-trips.
+4. **Auth gating.** Every BFF route validates the user's session before proxying to AWS. Unauthenticated requests return 401. *(Auth implementation TBD — see tech-stack.mdc.)*
+
+## Route Handler Pattern
+
+```typescript
+// src/app/api/players/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // 1. Validate session (TBD — auth implementation deferred)
+  // const session = await getSession(request);
+  // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // 2. Forward to AWS API
+  const response = await fetch(`${process.env.AWS_API_BASE_URL}/players`, {
+    headers: {
+      'Authorization': `Bearer ${process.env.AWS_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // 3. Return response
+  const data = await response.json();
+  return NextResponse.json(data);
+}
+```
+
+## Conventions
+
+- Use Next.js Route Handler conventions: `route.ts` files exporting `GET`, `POST`, `PUT`, `DELETE`.
+- Type all request/response payloads using shared types from `src/types/`.
+- Handle AWS API errors gracefully — map them to appropriate HTTP status codes for the client.
+- Log errors server-side but return sanitized messages to the client (no AWS internals leak).
+
+## Environment Variables
+
+BFF routes rely on server-only env vars (not prefixed with `NEXT_PUBLIC_`):
+
+```
+AWS_API_BASE_URL=https://api.example.com
+AWS_API_KEY=...
+# Auth-related env vars TBD
+```
+
+These are configured in Vercel's environment settings per deployment environment (dev, preview, production).

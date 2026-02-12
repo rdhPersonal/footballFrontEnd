@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Brew — Dark Neutrals */
+  --color-brew-950: #0a0a0f;
+  --color-brew-900: #12111a;
+  --color-brew-800: #1c1a27;
+  --color-brew-700: #2a2738;
+  --color-brew-600: #3d3952;
+  --color-brew-400: #8b85a1;
+  --color-brew-200: #d0cde0;
+  --color-brew-50: #f0eef5;
+
+  /* Vegas — Accents */
+  --color-vegas-gold: #d4a843;
+  --color-vegas-champagne: #f5e6c8;
+  --color-vegas-neon: #c24cff;
+  --color-vegas-emerald: #2dd4a0;
+  --color-vegas-crimson: #ef4444;
+  --color-vegas-amber: #f59e0b;
+
+  /* Custom Shadows */
+  --shadow-brew: 0 4px 24px rgba(10, 10, 15, 0.6);
+  --shadow-gold: 0 0 20px rgba(212, 168, 67, 0.15);
+  --shadow-neon: 0 0 16px rgba(194, 76, 255, 0.2);
+
+  /* Typography */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  background-color: var(--color-brew-950);
+  color: var(--color-brew-200);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

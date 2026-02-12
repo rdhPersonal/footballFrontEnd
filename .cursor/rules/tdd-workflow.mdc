@@ -1,0 +1,60 @@
+---
+description: Test-Driven Development workflow — write tests first for all behavioral code
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# Test-Driven Development (TDD)
+
+This project follows TDD. When building new components, hooks, or utility functions, **write the test first**.
+
+## Red-Green-Refactor Cycle
+
+1. **Red:** Write a failing test that describes the desired behavior.
+2. **Green:** Write the minimum code to make the test pass.
+3. **Refactor:** Clean up the implementation while keeping tests green.
+4. Repeat for the next behavior.
+
+## When to TDD (Always)
+
+- New design system components — test each prop/variant/behavior before implementing.
+- Custom hooks — test inputs and outputs via `renderHook` before writing hook logic.
+- Utility functions — test edge cases before implementing.
+- New features — write a behavioral test for the user flow first.
+
+## When to Test After (Exception, Not the Rule)
+
+- Exploratory prototyping — stabilize the API first, then backfill tests before merging.
+- Visual/layout-only work — use Storybook stories instead of unit tests.
+
+## TDD in Practice for Components
+
+```tsx
+// Step 1 (RED): Write the test FIRST — component doesn't exist yet
+// PlayerCard.test.tsx
+import { render, screen } from '@testing-library/react';
+import { PlayerCard } from './PlayerCard';
+
+describe('PlayerCard', () => {
+  it('renders the player name and position', () => {
+    render(<PlayerCard name="Patrick Mahomes" position="QB" teamAbbr="KC" />);
+    expect(screen.getByText('Patrick Mahomes')).toBeInTheDocument();
+    expect(screen.getByText('QB')).toBeInTheDocument();
+  });
+});
+
+// Step 2 (GREEN): Write the minimum component to pass
+// Step 3 (REFACTOR): Add Tailwind classes, polish, keep tests green
+// Step 4: Add the next test (e.g., "shows injury badge when status is OUT")
+```
+
+## The TDD Checklist for Every New Component
+
+Before considering a component complete, tests should cover:
+
+- [ ] Renders with required props (happy path)
+- [ ] Each visual variant renders distinctly
+- [ ] Conditional elements show/hide based on props
+- [ ] Callbacks fire on user interaction
+- [ ] Disabled/loading states prevent interaction
+- [ ] Accessibility: correct roles, labels, keyboard navigation

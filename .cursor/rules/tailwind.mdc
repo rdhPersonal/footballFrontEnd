@@ -1,0 +1,53 @@
+---
+description: Tailwind CSS usage patterns and conventions
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Tailwind Conventions
+
+## Core Principles
+
+- **Utility-first** — compose styles from Tailwind classes directly on elements.
+- **No inline `style` attributes** unless dynamically computed (e.g., percentage widths from data).
+- **No CSS modules or styled-components** — Tailwind is the single styling approach.
+- **Use the custom theme** — always prefer project tokens (`bg-brew-900`, `text-vegas-gold`) over raw values.
+
+## Class Organization
+
+Order classes consistently using this grouping:
+
+```
+layout → sizing → spacing → typography → colors → borders → effects → states → transitions
+```
+
+```tsx
+// ✅ Organized
+<div className="flex items-center gap-4 w-full p-4 text-sm text-brew-200 bg-brew-900 border border-brew-700 rounded-lg shadow-brew hover:border-vegas-gold/30 transition-colors duration-200" />
+```
+
+## Conditional Classes
+
+- Use `clsx` or `tailwind-merge` for conditional class composition.
+- Extract repeated class combinations into component variants, not utility CSS.
+
+```tsx
+// ✅ Use clsx for conditionals
+import { clsx } from 'clsx';
+
+<button className={clsx(
+  'px-4 py-2 rounded-md font-medium transition-colors',
+  variant === 'primary' && 'bg-vegas-gold text-brew-950 hover:bg-vegas-champagne',
+  variant === 'ghost' && 'bg-transparent text-brew-200 border border-brew-700 hover:border-brew-400',
+)} />
+```
+
+## Responsive Design
+
+- Mobile-first — base styles for mobile, `sm:`, `md:`, `lg:` for larger screens.
+- Player cards stack vertically on mobile, grid on `md:` and above.
+- Tables scroll horizontally on mobile (`overflow-x-auto`).
+
+## Custom Theme Tokens
+
+Always use the project's custom color palette (`brew-*`, `vegas-*`) defined in `tailwind.config.ts`. Never use raw hex values or default Tailwind colors in component code.

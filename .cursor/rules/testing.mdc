@@ -1,0 +1,55 @@
+---
+description: Testing conventions and standards
+globs: "**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx"
+alwaysApply: false
+---
+
+# Testing Standards
+
+**This project practices TDD.** See `tdd-workflow.mdc` for the Red-Green-Refactor cycle. Tests are written *before* implementation, not after.
+
+## Test Framework
+
+- Use **Vitest** as the test runner (aligned with Vite).
+- Use **React Testing Library** for component tests — test behavior, not implementation.
+- Use **@testing-library/user-event** over `fireEvent` for realistic interactions.
+
+## What to Test
+
+- **Design system components:** Render with each variant, keyboard navigation, accessibility (aria attributes), conditional rendering, callback invocation.
+- **App features:** User flows, data display after fetch, error/loading states, form submissions.
+- **Hooks:** Input/output behavior via `renderHook`.
+- **Do NOT test:** Internal state, CSS class names, implementation details, third-party libraries.
+
+## File Organization
+
+- Colocate tests with source: `Button.tsx` → `Button.test.tsx` in the same directory.
+- Name test files with `.test.tsx` suffix (not `.spec`).
+- Group tests with `describe` blocks matching the component name.
+
+```tsx
+// ✅ Testing behavior, not implementation
+describe('Button', () => {
+  it('calls onClick when clicked', async () => {
+    const handleClick = vi.fn();
+    render(<Button onClick={handleClick}>Save</Button>);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(handleClick).toHaveBeenCalledOnce();
+  });
+
+  it('renders as disabled when disabled prop is true', () => {
+    render(<Button disabled>Save</Button>);
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+});
+```
+
+## Naming
+
+- `describe` block: component or function name.
+- `it` blocks: start with a verb — "renders", "calls", "shows", "hides", "navigates".
+- Be specific: "shows injury badge when player status is OUT" not "renders correctly".
+
+## Accessibility Testing
+
+- Include at least one `axe`-based accessibility check per component using `vitest-axe` or `jest-axe`.

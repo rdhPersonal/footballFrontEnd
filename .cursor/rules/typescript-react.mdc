@@ -1,0 +1,52 @@
+---
+description: TypeScript and React coding conventions
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# TypeScript & React Standards
+
+## TypeScript
+
+- Use `interface` for component props; use `type` for unions, intersections, and utility types.
+- Prefer explicit return types on exported functions.
+- No `any` — use `unknown` and narrow with type guards.
+- Use `as const` for literal objects and enums-as-objects.
+
+```typescript
+// ✅ Props use interface
+interface PlayerCardProps {
+  name: string;
+  position: Position;
+  stats: PlayerStats;
+  onSelect?: (playerId: string) => void;
+}
+
+// ✅ Unions use type
+type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
+```
+
+## React
+
+- **Functional components only** — no class components.
+- **Named exports** — no default exports (easier to refactor, better tree-shaking). **Exceptions:** Next.js `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx` files require default exports. Storybook `*.stories.tsx` `meta` also requires a default export.
+- **Naming:** PascalCase for components, camelCase for hooks (`usePlayerData`), UPPER_SNAKE for constants.
+- **Props destructuring** in function signature, not in body.
+- **Extract hooks** when logic is reused or when a component exceeds ~80 lines.
+- **Colocation:** Keep component, its types, and its tests adjacent.
+
+```tsx
+// ✅ CORRECT pattern
+export function PlayerCard({ name, position, stats, onSelect }: PlayerCardProps): React.ReactElement {
+  // ...
+}
+
+// ❌ WRONG — default export (except Next.js pages/layouts and Storybook meta)
+export default function PlayerCard() { /* ... */ }
+```
+
+## Error Handling
+
+- Always handle errors explicitly — no empty catch blocks.
+- Throw domain-specific errors, not raw strings.
+- Use error boundaries for component-level failures.

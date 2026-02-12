@@ -1,0 +1,44 @@
+---
+description: Confirmed technology stack and deferred decisions
+alwaysApply: true
+---
+
+# Technology Stack
+
+## Confirmed Choices
+
+| Layer | Technology | Notes |
+|---|---|---|
+| Framework | **Next.js 15** (App Router) | React-based, SSR via Server Components, deployed on Vercel |
+| Repo Structure | **Single repo, single package** | No monorepo, no Turborepo, no workspaces. One package.json. |
+| Deployment | **Vercel** | Zero-config Next.js deployment, edge functions, preview deploys |
+| Styling | **Tailwind CSS v4** | Utility-first, custom brew/vegas theme |
+| Component Primitives | **Radix UI** | Accessible headless components (modals, dropdowns, tooltips) |
+| Data Fetching (client) | **TanStack Query** | Client-side caching, mutations, optimistic updates |
+| Data Fetching (server) | **Next.js Server Components** | SSR data loading, no client-side spinner for initial loads |
+| Tables | **TanStack Table** | Sorting, filtering, pagination for stat tables |
+| Class Utilities | **clsx + tailwind-merge** | Conditional Tailwind class composition |
+| Icons | **Lucide React** | Clean, consistent icon set |
+| Fonts | **next/font** | Self-hosted Inter, JetBrains Mono — no layout shift |
+| Testing | **Vitest + React Testing Library** | TDD workflow (see tdd-workflow.mdc) |
+| Visual Testing | **Storybook** | Component catalog, visual validation (see storybook.mdc) |
+| Linting | **ESLint + eslint-plugin-boundaries** | Enforces import boundary rules |
+| Package Manager | **npm** or **pnpm** | TBD at scaffold time |
+
+## Deferred Decisions
+
+### Authentication (TBD)
+
+- Will authenticate against **AWS Cognito**.
+- **Decision deferred:** May proxy Cognito auth through endpoints provided by the AWS backend rather than handling Cognito directly in this frontend.
+- Options still on the table:
+  1. Auth.js (next-auth) with Cognito provider — frontend manages sessions
+  2. Backend-proxied auth — AWS backend exposes auth endpoints, this frontend calls them via BFF
+  3. AWS Amplify Auth — heavier, more opinionated
+- **Do NOT implement auth until this decision is made.** Use mock/stub auth in the meantime.
+
+## Backend
+
+- Backend APIs are in a **separate AWS codebase** (not this repo).
+- This frontend communicates with AWS via the BFF layer (`src/app/api/`).
+- AWS services, database, and business logic are not a concern of this codebase.

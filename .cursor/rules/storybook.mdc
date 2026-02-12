@@ -1,0 +1,60 @@
+---
+description: Storybook story authoring conventions
+globs: "**/*.stories.tsx,**/*.stories.ts"
+alwaysApply: false
+---
+
+# Storybook Conventions
+
+## Purpose
+
+Storybook provides **visual validation** for the design system. Every design system component gets a story file. Tests cover behavior (Vitest); stories cover appearance.
+
+## File Organization
+
+- Colocate stories with components: `Button.tsx` → `Button.stories.tsx` in the same directory.
+- Stories are for **design system components only** — not app pages or feature modules.
+
+## Story Structure
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { ComponentName } from './ComponentName';
+
+const meta: Meta<typeof ComponentName> = {
+  title: 'Category/ComponentName',   // e.g., 'Primitives/Button', 'Player/PlayerCardCompact'
+  component: ComponentName,
+  parameters: {
+    backgrounds: { default: 'brew' },  // Always use dark brew background
+  },
+  tags: ['autodocs'],                  // Auto-generate docs from props
+};
+
+export default meta;  // NOTE: Storybook requires default export — this is the ONE exception
+type Story = StoryObj<typeof ComponentName>;
+
+export const Default: Story = {
+  args: { /* default props */ },
+};
+```
+
+## Story Categories (sidebar organization)
+
+| Category | Components |
+|---|---|
+| `Primitives/` | Button, Badge, Avatar, Input, Toggle, Tooltip |
+| `Player/` | PlayerCardCompact, PlayerCardDetailed, PlayerStatRow, PlayerMiniCard |
+| `Data Display/` | StatTable, StatBar, ScoreIndicator, RankBadge |
+| `Layout/` | Card, Modal, Tabs, Sidebar |
+| `Fantasy/` | LineupSlot, RosterGrid, MatchupCard, TradeBlock |
+
+## What Every Component Story Must Include
+
+1. **Default** — component with required props only.
+2. **All variants** — one story per visual variant (primary, secondary, ghost, danger).
+3. **Edge cases** — long text, missing optional data, empty states.
+4. **Interactive** — stories that demonstrate hover, focus, and click behaviors using Storybook actions.
+
+## Storybook Background
+
+Configure a custom `brew` background matching the app's `brew-950` (#0a0a0f) in `.storybook/preview.ts` so components render against the correct dark surface.
