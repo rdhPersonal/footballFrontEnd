@@ -58,7 +58,7 @@ src/
 │   ├── waivers/              # /waivers — waiver wire
 │   ├── trades/               # /trades — trade proposals
 │   └── api/                  # BFF Route Handlers (see bff.mdc)
-│       ├── auth/             # Cognito session endpoints (TBD)
+│       ├── auth/             # Cognito auth (login, callback, logout, session)
 │       ├── players/          # Proxy to AWS player data APIs
 │       └── league/           # Proxy to AWS league APIs
 ├── design-system/            # Reusable UI components and tokens (library code)
@@ -70,7 +70,7 @@ src/
 │   ├── tokens/               # Color, typography, spacing token exports
 │   └── index.ts              # Public API — barrel export (the ONLY import point)
 ├── features/                 # App-specific feature logic (not pages, not design system)
-│   ├── auth/                 # Auth hooks, session helpers (implementation TBD)
+│   ├── auth/                 # useSession hook, auth state helpers
 │   ├── roster/               # Roster management hooks and logic
 │   ├── players/              # Player search, filtering, sorting hooks
 │   └── matchups/             # Matchup comparison logic

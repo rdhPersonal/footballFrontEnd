@@ -1,5 +1,5 @@
 ---
-description: BFF (Backend for Frontend) route handler patterns
+description: BFF (Backend for Frontend) route handler patterns including authentication
 globs: "**/app/api/**"
 alwaysApply: false
 ---
@@ -11,32 +11,195 @@ The `src/app/api/` directory contains Next.js Route Handlers that serve as a thi
 ## Principles
 
 1. **Thin proxy.** The BFF forwards requests to AWS APIs. It does NOT contain business logic — that belongs in the AWS backend codebase.
-2. **Server-side secrets.** AWS API keys, service URLs, and auth tokens live in environment variables and NEVER ship to the browser.
+2. **Server-side secrets.** AWS API keys, Cognito client credentials, and auth tokens live in environment variables and NEVER ship to the browser.
 3. **Aggregation.** When a page needs data from multiple AWS endpoints, the BFF can combine them into a single response to reduce client round-trips.
-4. **Auth gating.** Every BFF route validates the user's session before proxying to AWS. Unauthenticated requests return 401. *(Auth implementation TBD — see tech-stack.mdc.)*
+4. **Auth gating.** Every non-auth BFF route validates the user's session cookie before proxying to AWS. Unauthenticated requests return 401.
 
-## Route Handler Pattern
+## Auth Route Handlers
+
+### `/api/auth/login` — Initiate Sign-In
+
+```typescript
+// src/app/api/auth/login/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // 1. Generate PKCE code verifier and challenge
+  const codeVerifier = crypto.randomBytes(32).toString('base64url');
+  const codeChallenge = crypto
+    .createHash('sha256')
+    .update(codeVerifier)
+    .digest('base64url');
+
+  // 2. Store code verifier in a temporary cookie (needed for callback)
+  const response = NextResponse.redirect(buildCognitoAuthUrl(codeChallenge));
+  response.cookies.set('pkce_verifier', codeVerifier, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax', // lax needed for redirect flow
+    maxAge: 300, // 5 min TTL
+    path: '/',
+  });
+
+  return response;
+}
+
+function buildCognitoAuthUrl(codeChallenge: string): string {
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: process.env.COGNITO_CLIENT_ID!,
+    redirect_uri: process.env.COGNITO_REDIRECT_URI!,
+    scope: 'openid profile email',
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+  });
+  return `${process.env.COGNITO_DOMAIN}/oauth2/authorize?${params}`;
+}
+```
+
+### `/api/auth/callback` — Exchange Code for Tokens
+
+```typescript
+// src/app/api/auth/callback/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const code = request.nextUrl.searchParams.get('code');
+  const codeVerifier = request.cookies.get('pkce_verifier')?.value;
+
+  if (!code || !codeVerifier) {
+    return NextResponse.redirect(new URL('/api/auth/login', request.url));
+  }
+
+  // 1. Exchange authorization code for tokens (SERVER-SIDE)
+  const tokenResponse = await fetch(`${process.env.COGNITO_DOMAIN}/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: process.env.COGNITO_CLIENT_ID!,
+      redirect_uri: process.env.COGNITO_REDIRECT_URI!,
+      code,
+      code_verifier: codeVerifier,
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    return NextResponse.redirect(new URL('/api/auth/login', request.url));
+  }
+
+  const tokens = await tokenResponse.json();
+
+  // 2. Encrypt tokens into session cookie (using iron-session or similar)
+  const response = NextResponse.redirect(new URL('/', request.url));
+  // TODO: Use iron-session to seal tokens into encrypted cookie
+  // await setSession(response, { accessToken, idToken, refreshToken });
+
+  // 3. Clear PKCE verifier cookie
+  response.cookies.delete('pkce_verifier');
+
+  return response;
+}
+```
+
+### `/api/auth/logout` — End Session
+
+```typescript
+// src/app/api/auth/logout/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const logoutUrl = new URL(`${process.env.COGNITO_DOMAIN}/logout`);
+  logoutUrl.searchParams.set('client_id', process.env.COGNITO_CLIENT_ID!);
+  logoutUrl.searchParams.set('logout_uri', process.env.COGNITO_LOGOUT_URI!);
+
+  const response = NextResponse.redirect(logoutUrl);
+  // TODO: Clear session cookie
+  // await clearSession(response);
+  return response;
+}
+```
+
+### `/api/auth/session` — Get Current User
+
+```typescript
+// src/app/api/auth/session/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // TODO: Read and decrypt session cookie
+  // const session = await getSession(request);
+  // if (!session) return NextResponse.json({ user: null }, { status: 401 });
+  // Decode ID token to get user profile (sub, email, name)
+  // return NextResponse.json({ user: { sub, email, name } });
+  return NextResponse.json({ user: null }, { status: 401 });
+}
+```
+
+## Data Route Handler Pattern (Authenticated)
+
+All non-auth BFF routes follow this pattern — validate session, extract access token, forward to AWS:
 
 ```typescript
 // src/app/api/players/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // 1. Validate session (TBD — auth implementation deferred)
-  // const session = await getSession(request);
-  // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // 1. Validate session and extract access token
+  const session = await getSession(request);
+  if (!session?.accessToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  // 2. Forward to AWS API
+  // 2. Check if access token is expired → refresh if needed
+  if (isTokenExpired(session.accessToken)) {
+    const newTokens = await refreshTokens(session.refreshToken);
+    if (!newTokens) {
+      return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+    }
+    session.accessToken = newTokens.accessToken;
+    // TODO: Update session cookie with new tokens
+  }
+
+  // 3. Forward to AWS API with access token as Bearer
   const response = await fetch(`${process.env.AWS_API_BASE_URL}/players`, {
     headers: {
-      'Authorization': `Bearer ${process.env.AWS_API_KEY}`,
+      'Authorization': `Bearer ${session.accessToken}`,
       'Content-Type': 'application/json',
     },
   });
 
-  // 3. Return response
+  // 4. Handle errors gracefully
+  if (!response.ok) {
+    const status = response.status === 403 ? 403 : response.status >= 500 ? 502 : response.status;
+    return NextResponse.json({ error: 'Request failed' }, { status });
+  }
+
+  // 5. Return response
   const data = await response.json();
   return NextResponse.json(data);
+}
+```
+
+## Token Refresh (Server-Side)
+
+When the access token expires, the BFF refreshes it transparently:
+
+```typescript
+async function refreshTokens(refreshToken: string): Promise<TokenSet | null> {
+  const response = await fetch(`${process.env.COGNITO_DOMAIN}/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: process.env.COGNITO_CLIENT_ID!,
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!response.ok) return null;
+  return response.json();
 }
 ```
 
@@ -46,15 +209,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 - Type all request/response payloads using shared types from `src/types/`.
 - Handle AWS API errors gracefully — map them to appropriate HTTP status codes for the client.
 - Log errors server-side but return sanitized messages to the client (no AWS internals leak).
+- **Never return raw tokens to the browser.** The session cookie is the only auth artifact the browser sees.
 
 ## Environment Variables
 
-BFF routes rely on server-only env vars (not prefixed with `NEXT_PUBLIC_`):
+BFF routes rely on server-only env vars (NOT prefixed with `NEXT_PUBLIC_`):
 
 ```
+# AWS API
 AWS_API_BASE_URL=https://api.example.com
-AWS_API_KEY=...
-# Auth-related env vars TBD
+
+# Cognito
+COGNITO_DOMAIN=https://your-pool.auth.us-east-1.amazoncognito.com
+COGNITO_CLIENT_ID=your-app-client-id
+COGNITO_REDIRECT_URI=https://your-vercel-domain.com/api/auth/callback
+COGNITO_LOGOUT_URI=https://your-vercel-domain.com
+
+# Session encryption
+SESSION_SECRET=a-32-char-minimum-secret-for-iron-session
 ```
 
-These are configured in Vercel's environment settings per deployment environment (dev, preview, production).
+These are configured in Vercel's environment settings per deployment environment (dev, preview, production). **Never commit these values to the repository.**

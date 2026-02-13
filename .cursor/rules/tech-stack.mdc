@@ -1,5 +1,5 @@
 ---
-description: Confirmed technology stack and deferred decisions
+description: Confirmed technology stack and architectural decisions
 alwaysApply: true
 ---
 
@@ -23,22 +23,64 @@ alwaysApply: true
 | Testing | **Vitest + React Testing Library** | TDD workflow (see tdd-workflow.mdc) |
 | Visual Testing | **Storybook** | Component catalog, visual validation (see storybook.mdc) |
 | Linting | **ESLint + eslint-plugin-boundaries** | Enforces import boundary rules |
-| Package Manager | **npm** or **pnpm** | TBD at scaffold time |
+| Authentication | **AWS Cognito (Hosted UI) + BFF Token Relay** | See Authentication section below |
+| Session Management | **iron-session** (or equivalent) | Encrypted HTTP-only cookies, server-side only |
+| Package Manager | **npm** | |
 
-## Deferred Decisions
+## Authentication Architecture
 
-### Authentication (TBD)
+### Pattern: BFF Token Relay with Cognito Hosted UI
 
-- Will authenticate against **AWS Cognito**.
-- **Decision deferred:** May proxy Cognito auth through endpoints provided by the AWS backend rather than handling Cognito directly in this frontend.
-- Options still on the table:
-  1. Auth.js (next-auth) with Cognito provider — frontend manages sessions
-  2. Backend-proxied auth — AWS backend exposes auth endpoints, this frontend calls them via BFF
-  3. AWS Amplify Auth — heavier, more opinionated
-- **Do NOT implement auth until this decision is made.** Use mock/stub auth in the meantime.
+Authentication uses **Authorization Code Flow with PKCE** via the Cognito Hosted UI. The BFF (Next.js Route Handlers) manages the entire token lifecycle. **Tokens never reach the browser.**
+
+### Flow
+
+1. User clicks "Sign In" → BFF redirects browser to Cognito Hosted UI with PKCE challenge
+2. User authenticates on Cognito's form → Cognito redirects to `/api/auth/callback` with authorization code
+3. BFF exchanges the authorization code + PKCE verifier for tokens (access, ID, refresh) **server-side**
+4. BFF encrypts tokens into an HTTP-only, Secure, SameSite=Strict session cookie
+5. Browser makes API calls to BFF routes → BFF reads session cookie, extracts access token, attaches as `Authorization: Bearer` header to AWS API calls
+6. When the access token expires, BFF uses the refresh token to get a new one — transparent to the browser
+7. AWS backend validates the JWT (signature, expiry, issuer, audience) — standard OAuth 2.0
+
+### Security Properties
+
+- **Tokens never exist in client-side JavaScript** — no XSS risk for token theft
+- **Browser only has an encrypted HTTP-only cookie** — JS cannot read it
+- **Refresh tokens are server-side only** — never exposed to the client
+- **PKCE** prevents authorization code interception attacks
+- **SameSite=Strict cookie** mitigates CSRF
+
+### OAuth 2.0 Grant Details
+
+- **Grant type:** Authorization Code with PKCE
+- **Scopes:** `openid profile email` (minimum; extend as needed)
+- **Token types:** Access token (JWT, sent to AWS APIs), ID token (JWT, user profile info), Refresh token (opaque, stored server-side)
+- **Token validation:** AWS backend validates access token JWTs against Cognito's JWKS endpoint at `https://cognito-idp.{region}.amazonaws.com/{userPoolId}/.well-known/jwks.json`
+
+### What This Repo Owns (Frontend)
+
+| Route | Responsibility |
+|---|---|
+| `/api/auth/login` | Generates PKCE verifier/challenge, builds Cognito authorization URL, redirects browser |
+| `/api/auth/callback` | Receives auth code, exchanges for tokens server-side, sets encrypted session cookie, redirects to app |
+| `/api/auth/logout` | Clears session cookie, redirects to Cognito logout endpoint |
+| `/api/auth/session` | Returns current user profile (from ID token) for client components |
+| `middleware.ts` | Protects app routes — redirects to login if no valid session cookie |
+| `src/features/auth/` | `useSession` hook for client components to read auth state |
+
+### What the AWS Backend Owns
+
+| Layer | Responsibility |
+|---|---|
+| Cognito User Pool | User management, passwords, MFA, hosted sign-in UI, token issuance |
+| Cognito App Client | Configured with Authorization Code + PKCE, callback URL set to Vercel domain |
+| API Gateway | Cognito authorizer (or custom Lambda authorizer) validates JWT on every request |
+| Lambda / services | Receives pre-validated requests, reads user claims (sub, email, groups) from decoded token |
 
 ## Backend
 
 - Backend APIs are in a **separate AWS codebase** (not this repo).
 - This frontend communicates with AWS via the BFF layer (`src/app/api/`).
 - AWS services, database, and business logic are not a concern of this codebase.
+- The BFF attaches the user's Cognito access token (JWT) to all API calls via `Authorization: Bearer` header.
