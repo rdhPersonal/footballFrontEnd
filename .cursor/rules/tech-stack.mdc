@@ -39,9 +39,9 @@ Authentication uses **Authorization Code Flow with PKCE** via the Cognito Hosted
 2. User authenticates on Cognito's form → Cognito redirects to `/api/auth/callback` with authorization code
 3. BFF exchanges the authorization code + PKCE verifier for tokens (access, ID, refresh) **server-side**
 4. BFF encrypts tokens into an HTTP-only, Secure, SameSite=Strict session cookie
-5. Browser makes API calls to BFF routes → BFF reads session cookie, extracts access token, attaches as `Authorization: Bearer` header to AWS API calls
-6. When the access token expires, BFF uses the refresh token to get a new one — transparent to the browser
-7. AWS backend validates the JWT (signature, expiry, issuer, audience) — standard OAuth 2.0
+5. Browser makes API calls to BFF routes → BFF reads session cookie, extracts **ID token**, attaches as `Authorization: Bearer` header to AWS API calls
+6. When the ID token expires, BFF uses the refresh token to get new tokens — transparent to the browser
+7. AWS API Gateway validates the ID token JWT (signature, expiry, issuer, audience=client ID) — the authorizer checks audience against the Cognito app client ID, which only matches in ID tokens (not access tokens)
 
 ### Security Properties
 
@@ -55,8 +55,8 @@ Authentication uses **Authorization Code Flow with PKCE** via the Cognito Hosted
 
 - **Grant type:** Authorization Code with PKCE
 - **Scopes:** `openid profile email` (minimum; extend as needed)
-- **Token types:** Access token (JWT, sent to AWS APIs), ID token (JWT, user profile info), Refresh token (opaque, stored server-side)
-- **Token validation:** AWS backend validates access token JWTs against Cognito's JWKS endpoint at `https://cognito-idp.{region}.amazonaws.com/{userPoolId}/.well-known/jwks.json`
+- **Token types:** ID token (JWT, sent to AWS APIs — contains user profile claims and has audience=client ID), Access token (JWT, not sent to AWS — audience=User Pool URL), Refresh token (opaque, stored server-side for token renewal)
+- **Token validation:** AWS API Gateway validates ID token JWTs against Cognito's JWKS endpoint at `https://cognito-idp.{region}.amazonaws.com/{userPoolId}/.well-known/jwks.json`, checking audience against the app client ID
 
 ### What This Repo Owns (Frontend)
 
@@ -83,4 +83,4 @@ Authentication uses **Authorization Code Flow with PKCE** via the Cognito Hosted
 - Backend APIs are in a **separate AWS codebase** (not this repo).
 - This frontend communicates with AWS via the BFF layer (`src/app/api/`).
 - AWS services, database, and business logic are not a concern of this codebase.
-- The BFF attaches the user's Cognito access token (JWT) to all API calls via `Authorization: Bearer` header.
+- The BFF attaches the user's Cognito **ID token** (JWT) to all API calls via `Authorization: Bearer` header. The API Gateway JWT authorizer validates audience against the client ID, which only matches in ID tokens.
