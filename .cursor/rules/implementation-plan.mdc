@@ -18,69 +18,80 @@ Created March 1, 2026. This captures the phased plan for building the footballFr
 - Daily sync Lambda via EventBridge + manual load/clear scripts
 - 63 automated tests (37 unit + 26 integration) passing
 
-### footballFrontEnd (early foundation)
+### footballFrontEnd (Phase 1 complete as of March 1, 2026)
 - Next.js 16 with App Router, Tailwind v4, Vitest, Storybook
 - Design system foundation: Button, Badge primitives with tests/stories
 - Design tokens (brew/vegas palette, typography)
 - TypeScript types for Player, League, Matchup
-- No auth, no BFF routes, no data pages, no middleware
+- **Auth complete**: Cognito PKCE flow via BFF, iron-session encrypted cookies, middleware route protection, useSession hook
+- **BFF proxy complete**: 4 data routes proxying to AWS API Gateway with ID token auth + automatic token refresh
+- **API client complete**: Typed fetch wrapper for all BFF endpoints
+- **32 design system tests passing**, TypeScript and Next.js build clean
 
 ## Known Issue: ID Token vs. Access Token
 
 The API Gateway JWT authorizer validates **ID tokens**, not access tokens. Cognito access tokens set the audience to the User Pool URL, but the authorizer checks against the **client ID**, which only matches ID tokens.
 
-The BFF must send the **ID token** (not access token) as `Authorization: Bearer` to the AWS API. The `bff.mdc` code examples reference `session.accessToken` — this should be `session.idToken` when implementing.
+The BFF must send the **ID token** (not access token) as `Authorization: Bearer` to the AWS API. The `bff.mdc` and `tech-stack.mdc` docs have been corrected to reflect this (previously referenced `accessToken`).
 
 ## Phase 1: Auth + BFF Foundation (get the frontend talking to the backend)
 
 Goal: A user can sign in via Cognito, and the frontend can fetch real player data from the AWS backend through the BFF proxy.
 
-### 1.1 Environment setup
-- [ ] Create `.env.local` with all required variables:
-  - `AWS_API_BASE_URL=https://z8y6zlxrmc.execute-api.us-west-2.amazonaws.com`
-  - `COGNITO_DOMAIN=https://football-dev.auth.us-west-2.amazoncognito.com`
-  - `COGNITO_CLIENT_ID=12hi070g8mrjkefh1pciv624om`
-  - `COGNITO_REDIRECT_URI=http://localhost:3000/api/auth/callback`
-  - `COGNITO_LOGOUT_URI=http://localhost:3000`
-  - `SESSION_SECRET=<generate a 32+ char secret>`
-- [ ] Create `.env.example` (no real values, just placeholder keys)
-- [ ] Update `next.config.ts` if needed (image domains for ESPN headshots, etc.)
+### 1.1 Environment setup -- DONE
+- [x] `.env.local` created with real Cognito/API Gateway values
+- [x] `.env.example` committed with placeholder keys
+- [x] `next.config.ts` updated with ESPN headshot image domain
 
-### 1.2 Install auth dependency
-- [ ] `npm install iron-session`
+### 1.2 Install auth dependency -- DONE
+- [x] `iron-session` installed
 
-### 1.3 Session management utilities
-- [ ] Create `src/lib/session.ts` — iron-session configuration, `getSession`/`setSession`/`clearSession` helpers
-- [ ] Session shape: `{ idToken: string, accessToken: string, refreshToken: string, expiresAt: number }`
-- [ ] Remember: send **idToken** (not accessToken) to the AWS API Gateway
+### 1.3 Session management utilities -- DONE
+- [x] `src/lib/session.ts` — iron-session config, getSession, isTokenExpired, decodeTokenPayload, refreshTokens
+- [x] Session shape: `{ idToken, accessToken, refreshToken, expiresAt }`
+- [x] ID token (not access token) sent to AWS API Gateway
 
-### 1.4 Auth route handlers
-- [ ] `src/app/api/auth/login/route.ts` — PKCE verifier/challenge generation, redirect to Cognito Hosted UI
-- [ ] `src/app/api/auth/callback/route.ts` — Exchange auth code for tokens, store in encrypted session cookie
-- [ ] `src/app/api/auth/logout/route.ts` — Clear session cookie, redirect to Cognito logout
-- [ ] `src/app/api/auth/session/route.ts` — Return current user info (decoded from ID token)
+### 1.4 Auth route handlers -- DONE
+- [x] `src/app/api/auth/login/route.ts` — PKCE S256 challenge, Cognito redirect, returnTo state
+- [x] `src/app/api/auth/callback/route.ts` — Code-for-token exchange, iron-session cookie seal
+- [x] `src/app/api/auth/logout/route.ts` — Session destroy, Cognito logout redirect
+- [x] `src/app/api/auth/session/route.ts` — Decoded user profile from ID token
 
-### 1.5 Route protection
-- [ ] `src/middleware.ts` — Check for valid session cookie, redirect to login if missing on protected routes
+### 1.5 Route protection -- DONE
+- [x] `src/middleware.ts` — Pages redirect to login, API routes return 401, public paths excluded
 
-### 1.6 Client-side auth hook
-- [ ] `src/features/auth/useSession.ts` — Client hook that calls `/api/auth/session`, provides user state
+### 1.6 Client-side auth hook -- DONE
+- [x] `src/features/auth/useSession.ts` — { user, isLoading, isAuthenticated, refresh }
 
-### 1.7 BFF data proxy routes
-- [ ] `src/app/api/players/route.ts` — Proxy GET to AWS `/players` with Bearer idToken
-- [ ] `src/app/api/players/[id]/route.ts` — Proxy GET to AWS `/players/{id}`
-- [ ] `src/app/api/players/[id]/stats/route.ts` — Proxy GET to AWS `/players/{id}/stats`
-- [ ] `src/app/api/players/[id]/roster-history/route.ts` — Proxy GET to AWS `/players/{id}/roster-history`
-- [ ] Token refresh: if idToken is expired, use refreshToken to get new tokens before proxying
+### 1.7 BFF data proxy routes -- DONE
+- [x] `src/lib/bff-proxy.ts` — Shared proxy with session validation and token refresh
+- [x] `src/app/api/players/route.ts` → AWS `/players`
+- [x] `src/app/api/players/[id]/route.ts` → AWS `/players/{id}`
+- [x] `src/app/api/players/[id]/stats/route.ts` → AWS `/players/{id}/stats`
+- [x] `src/app/api/players/[id]/roster-history/route.ts` → AWS `/players/{id}/roster-history`
 
-### 1.8 API client
-- [ ] `src/lib/api-client.ts` — Typed fetch wrapper for BFF endpoints (used by pages/features)
+### 1.8 API client -- DONE
+- [x] `src/lib/api-client.ts` — getPlayers, getPlayer, getPlayerStats, getPlayerRosterHistory with full types
 
-### 1.9 Verification
-- [ ] Sign in through Cognito Hosted UI end-to-end
-- [ ] Fetch player data through the BFF and see it rendered
-- [ ] Verify token refresh works when idToken expires
-- [ ] Verify unauthenticated access is rejected
+### 1.9 Verification -- PARTIAL
+- [x] TypeScript compiles clean, Next.js build succeeds, 32 design system tests pass
+- [x] `/api/auth/login` → 307 redirect to Cognito with PKCE challenge
+- [x] `/api/auth/session` → 401 when unauthenticated
+- [x] `/api/players` → 401 when unauthenticated (middleware)
+- [x] `/` → 307 redirect to `/api/auth/login?returnTo=%2F`
+- [ ] Full end-to-end browser test: sign in via Cognito → fetch player data → render
+- [ ] Token refresh verification (wait for ID token to expire, confirm transparent refresh)
+
+## Recommended Next Session
+
+When picking this back up, the suggested order is:
+
+1. **Merge PRs** after code review feedback is addressed:
+   - Backend: [footballBackEnd#2](https://github.com/rdhPersonal/footballBackEnd/pull/2) — testing, data scripts, Node 22
+   - Frontend: [footballFrontEnd#1](https://github.com/rdhPersonal/footballFrontEnd/pull/1) — auth + BFF foundation
+2. **Deploy backend Node 22 change**: `terraform apply` to update Lambda runtimes
+3. **Full E2E browser test**: Run `npm run dev`, sign in via Cognito in a browser, verify player data renders
+4. **Begin Phase 2 or Phase 3** depending on priority — data normalization or UI buildout
 
 ## Phase 2: Backend Data Improvements
 
