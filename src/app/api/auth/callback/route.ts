@@ -7,10 +7,15 @@ import {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const code = request.nextUrl.searchParams.get('code');
-  const state = request.nextUrl.searchParams.get('state');
+  const stateParam = request.nextUrl.searchParams.get('state');
   const codeVerifier = request.cookies.get('pkce_verifier')?.value;
 
   if (!code || !codeVerifier) {
+    return NextResponse.redirect(new URL('/api/auth/login', request.url));
+  }
+
+  const { nonce, returnTo } = extractOAuthState(request);
+  if (!nonce || nonce !== stateParam) {
     return NextResponse.redirect(new URL('/api/auth/login', request.url));
   }
 
@@ -33,8 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const tokens: TokenSet = await tokenResponse.json();
 
-  const redirectTo = state || '/';
-  const response = NextResponse.redirect(new URL(redirectTo, request.url));
+  const response = NextResponse.redirect(new URL(returnTo, request.url));
 
   const session = await getSessionFromRequest(request, response);
   session.idToken = tokens.id_token;
@@ -47,6 +51,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   await session.save();
 
   response.cookies.delete('pkce_verifier');
+  response.cookies.delete('oauth_state');
 
   return response;
+}
+
+function extractOAuthState(request: NextRequest): { nonce: string | null; returnTo: string } {
+  const raw = request.cookies.get('oauth_state')?.value;
+  if (!raw) return { nonce: null, returnTo: '/' };
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      nonce: typeof parsed.nonce === 'string' ? parsed.nonce : null,
+      returnTo: typeof parsed.returnTo === 'string' ? parsed.returnTo : '/',
+    };
+  } catch {
+    return { nonce: null, returnTo: '/' };
+  }
 }

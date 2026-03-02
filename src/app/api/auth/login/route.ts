@@ -8,7 +8,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .update(codeVerifier)
     .digest('base64url');
 
-  const response = NextResponse.redirect(buildCognitoAuthUrl(request, codeChallenge));
+  const stateNonce = crypto.randomBytes(16).toString('base64url');
+  const returnTo = sanitizeReturnTo(
+    request.nextUrl.searchParams.get('returnTo'),
+  );
+
+  const response = NextResponse.redirect(
+    buildCognitoAuthUrl(codeChallenge, stateNonce),
+  );
+
   response.cookies.set('pkce_verifier', codeVerifier, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -17,10 +25,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     path: '/',
   });
 
+  response.cookies.set(
+    'oauth_state',
+    JSON.stringify({ nonce: stateNonce, returnTo }),
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 300,
+      path: '/',
+    },
+  );
+
   return response;
 }
 
-function buildCognitoAuthUrl(request: NextRequest, codeChallenge: string): string {
+function sanitizeReturnTo(raw: string | null): string {
+  if (!raw) return '/';
+  try {
+    const url = new URL(raw, 'http://localhost');
+    if (url.origin !== 'http://localhost') return '/';
+    if (url.pathname.startsWith('//')) return '/';
+    return url.pathname + url.search;
+  } catch {
+    return '/';
+  }
+}
+
+function buildCognitoAuthUrl(codeChallenge: string, stateNonce: string): string {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: process.env.COGNITO_CLIENT_ID!,
@@ -28,12 +60,8 @@ function buildCognitoAuthUrl(request: NextRequest, codeChallenge: string): strin
     scope: 'openid profile email',
     code_challenge_method: 'S256',
     code_challenge: codeChallenge,
+    state: stateNonce,
   });
-
-  const returnTo = request.nextUrl.searchParams.get('returnTo');
-  if (returnTo) {
-    params.set('state', returnTo);
-  }
 
   return `${process.env.COGNITO_DOMAIN}/oauth2/authorize?${params}`;
 }
