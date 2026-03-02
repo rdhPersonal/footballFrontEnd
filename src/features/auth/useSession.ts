@@ -21,27 +21,37 @@ export function useSession(): SessionState & { refresh: () => void } {
     isAuthenticated: false,
   });
 
-  const fetchSession = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/session');
-      if (response.ok) {
-        const data = await response.json();
-        setState({
-          user: data.user,
-          isLoading: false,
-          isAuthenticated: !!data.user,
-        });
-      } else {
-        setState({ user: null, isLoading: false, isAuthenticated: false });
-      }
-    } catch {
-      setState({ user: null, isLoading: false, isAuthenticated: false });
-    }
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+    let ignore = false;
 
-  return { ...state, refresh: fetchSession };
+    fetch('/api/auth/session')
+      .then(async (response) => {
+        if (ignore) return;
+        if (response.ok) {
+          const data = await response.json();
+          setState({
+            user: data.user,
+            isLoading: false,
+            isAuthenticated: !!data.user,
+          });
+        } else {
+          setState({ user: null, isLoading: false, isAuthenticated: false });
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setState({ user: null, isLoading: false, isAuthenticated: false });
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshKey]);
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  return { ...state, refresh };
 }
