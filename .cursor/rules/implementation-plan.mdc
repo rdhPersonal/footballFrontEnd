@@ -1,0 +1,159 @@
+---
+description: Implementation plan for connecting the frontend to the backend and building out the application
+alwaysApply: true
+---
+
+# Implementation Plan
+
+Created March 1, 2026. This captures the phased plan for building the footballFrontEnd application. Priorities may shift — update this document as direction changes.
+
+## Current State
+
+### footballBackEnd (fully deployed and functional)
+- AWS Lambda (Node.js 22.x) + API Gateway + RDS PostgreSQL
+- 4 GET endpoints: `/players`, `/players/{id}`, `/players/{id}/stats`, `/players/{id}/roster-history`
+- Cognito User Pool with Hosted UI, PKCE app client (no secret), authorization code flow
+- API Gateway JWT authorizer validates **Cognito ID tokens** (not access tokens) against the app client ID
+- Data loaded: 2023-2025 seasons, ~2,500 players, ~20,600 stat rows
+- Daily sync Lambda via EventBridge + manual load/clear scripts
+- 63 automated tests (37 unit + 26 integration) passing
+
+### footballFrontEnd (Phase 1 complete as of March 1, 2026)
+- Next.js 16 with App Router, Tailwind v4, Vitest, Storybook
+- Design system foundation: Button, Badge primitives with tests/stories
+- Design tokens (brew/vegas palette, typography)
+- TypeScript types for Player, League, Matchup
+- **Auth complete**: Cognito PKCE flow via BFF, iron-session encrypted cookies, middleware route protection, useSession hook
+- **BFF proxy complete**: 4 data routes proxying to AWS API Gateway with ID token auth + automatic token refresh
+- **API client complete**: Typed fetch wrapper for all BFF endpoints
+- **32 design system tests passing**, TypeScript and Next.js build clean
+
+## Known Issue: ID Token vs. Access Token
+
+The API Gateway JWT authorizer validates **ID tokens**, not access tokens. Cognito access tokens set the audience to the User Pool URL, but the authorizer checks against the **client ID**, which only matches ID tokens.
+
+The BFF must send the **ID token** (not access token) as `Authorization: Bearer` to the AWS API. The `bff.mdc` and `tech-stack.mdc` docs have been corrected to reflect this (previously referenced `accessToken`).
+
+## Phase 1: Auth + BFF Foundation (get the frontend talking to the backend)
+
+Goal: A user can sign in via Cognito, and the frontend can fetch real player data from the AWS backend through the BFF proxy.
+
+### 1.1 Environment setup -- DONE
+- [x] `.env.local` created with real Cognito/API Gateway values
+- [x] `.env.example` committed with placeholder keys
+- [x] `next.config.ts` updated with ESPN headshot image domain
+
+### 1.2 Install auth dependency -- DONE
+- [x] `iron-session` installed
+
+### 1.3 Session management utilities -- DONE
+- [x] `src/lib/session.ts` — iron-session config, getSession, isTokenExpired, decodeTokenPayload, refreshTokens
+- [x] Session shape: `{ idToken, accessToken, refreshToken, expiresAt }`
+- [x] ID token (not access token) sent to AWS API Gateway
+
+### 1.4 Auth route handlers -- DONE
+- [x] `src/app/api/auth/login/route.ts` — PKCE S256 challenge, Cognito redirect, returnTo state
+- [x] `src/app/api/auth/callback/route.ts` — Code-for-token exchange, iron-session cookie seal
+- [x] `src/app/api/auth/logout/route.ts` — Session destroy, Cognito logout redirect
+- [x] `src/app/api/auth/session/route.ts` — Decoded user profile from ID token
+
+### 1.5 Route protection -- DONE
+- [x] `src/middleware.ts` — Pages redirect to login, API routes return 401, public paths excluded
+
+### 1.6 Client-side auth hook -- DONE
+- [x] `src/features/auth/useSession.ts` — { user, isLoading, isAuthenticated, refresh }
+
+### 1.7 BFF data proxy routes -- DONE
+- [x] `src/lib/bff-proxy.ts` — Shared proxy with session validation and token refresh
+- [x] `src/app/api/players/route.ts` → AWS `/players`
+- [x] `src/app/api/players/[id]/route.ts` → AWS `/players/{id}`
+- [x] `src/app/api/players/[id]/stats/route.ts` → AWS `/players/{id}/stats`
+- [x] `src/app/api/players/[id]/roster-history/route.ts` → AWS `/players/{id}/roster-history`
+
+### 1.8 API client -- DONE
+- [x] `src/lib/api-client.ts` — getPlayers, getPlayer, getPlayerStats, getPlayerRosterHistory with full types
+
+### 1.9 Verification -- PARTIAL
+- [x] TypeScript compiles clean, Next.js build succeeds, 32 design system tests pass
+- [x] `/api/auth/login` → 307 redirect to Cognito with PKCE challenge
+- [x] `/api/auth/session` → 401 when unauthenticated
+- [x] `/api/players` → 401 when unauthenticated (middleware)
+- [x] `/` → 307 redirect to `/api/auth/login?returnTo=%2F`
+- [ ] Full end-to-end browser test: sign in via Cognito → fetch player data → render
+- [ ] Token refresh verification (wait for ID token to expire, confirm transparent refresh)
+
+## Recommended Next Session
+
+When picking this back up, the suggested order is:
+
+1. **Merge PRs** after code review feedback is addressed:
+   - Backend: [footballBackEnd#2](https://github.com/rdhPersonal/footballBackEnd/pull/2) — testing, data scripts, Node 22
+   - Frontend: [footballFrontEnd#1](https://github.com/rdhPersonal/footballFrontEnd/pull/1) — auth + BFF foundation
+2. **Deploy backend Node 22 change**: `terraform apply` to update Lambda runtimes
+3. **Full E2E browser test**: Run `npm run dev`, sign in via Cognito in a browser, verify player data renders
+4. **Begin Phase 2 or Phase 3** depending on priority — data normalization or UI buildout
+
+## Phase 2: Backend Data Improvements
+
+Goal: Clean up the data layer so the frontend can consume stats without ESPN-specific knowledge.
+
+### 2.1 Normalize stat_details
+- [ ] Create mapping from raw ESPN stat names to a consistent schema (e.g., `passingYards` → standardized key)
+- [ ] Migration or runtime mapping layer in the backend
+- [ ] Update sync/backfill to write normalized names
+
+### 2.2 Fantasy scoring
+- [ ] Define scoring formula (standard, PPR, or configurable)
+- [ ] Populate `total_points` during sync and backfill
+- [ ] Add scoring configuration to the API response or as a separate endpoint
+
+### 2.3 Bye weeks
+- [ ] Fetch bye week data from ESPN schedule endpoints
+- [ ] Populate `bye_week` column on `nfl_teams`
+
+## Phase 3: Design System + Pages
+
+Goal: Build out the UI components and application pages.
+
+### 3.1 Install remaining dependencies
+- [ ] Radix UI (modals, dropdowns, tooltips)
+- [ ] TanStack Query (client-side caching)
+- [ ] TanStack Table (sortable/filterable stat tables)
+
+### 3.2 Design system buildout
+Build each component with TDD + Storybook story first, then consume from pages:
+- [ ] Layout: Card, Modal, Tabs, Sidebar, TopNav, PageLayout, Section
+- [ ] Player: PlayerMiniCard, PlayerCardCompact, PlayerCardDetailed, PlayerStatRow
+- [ ] Data Display: StatTable, StatBar, RankBadge, EmptyState
+- [ ] Fantasy: LineupSlot, RosterGrid, MatchupCard, WeekSelector
+
+### 3.3 Application pages
+- [ ] Players page — search, filter by position/team, stat table
+- [ ] Player detail page — profile, weekly stats, roster history
+- [ ] Dashboard / home page
+- [ ] Additional pages per application scope
+
+## Phase 4: Infrastructure Hardening
+
+### 4.1 Security
+- [ ] Remove `ALLOW_USER_PASSWORD_AUTH` from Cognito app client (keep SRP + refresh only)
+- [ ] Add Vercel production URL to Cognito callback/logout URLs
+- [ ] Align Lambda CORS headers with API Gateway (remove `*` wildcard)
+
+### 4.2 Operations
+- [ ] Replace bastion with SSM Session Manager
+- [ ] Move DB password to AWS Secrets Manager
+- [ ] Add CloudWatch alarms (Lambda errors, 5xx rates, RDS metrics)
+
+### 4.3 CI/CD
+- [ ] GitHub Actions or CodePipeline for backend (build + terraform apply)
+- [ ] Vercel handles frontend deployment automatically
+
+## Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-03-01 | Send ID token (not access token) to AWS API | API Gateway JWT authorizer validates audience against client ID, which only matches in ID tokens |
+| 2026-03-01 | Use iron-session for encrypted cookies | Documented in tech-stack.mdc and bff.mdc; keeps tokens server-side only |
+| 2026-03-01 | Upgrade Lambda to Node.js 22.x | AWS ending Node 20 support April 30, 2026 |
+| 2026-03-01 | Phase 1 focuses on auth + BFF patterns first | Frontend can't do anything useful without backend connectivity |

@@ -139,33 +139,38 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 ## Data Route Handler Pattern (Authenticated)
 
-All non-auth BFF routes follow this pattern — validate session, extract access token, forward to AWS:
+All non-auth BFF routes follow this pattern — validate session, extract ID token, forward to AWS:
+
+> **Important:** The AWS API Gateway JWT authorizer validates **ID tokens** (not access tokens).
+> Cognito access tokens use the User Pool URL as the audience, but the authorizer checks
+> audience against the **client ID**, which only matches in ID tokens. The BFF must send
+> the ID token as the Bearer token to AWS.
 
 ```typescript
 // src/app/api/players/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // 1. Validate session and extract access token
+  // 1. Validate session and extract ID token
   const session = await getSession(request);
-  if (!session?.accessToken) {
+  if (!session?.idToken) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 2. Check if access token is expired → refresh if needed
-  if (isTokenExpired(session.accessToken)) {
+  // 2. Check if ID token is expired → refresh if needed
+  if (isTokenExpired(session.idToken)) {
     const newTokens = await refreshTokens(session.refreshToken);
     if (!newTokens) {
       return NextResponse.json({ error: 'Session expired' }, { status: 401 });
     }
-    session.accessToken = newTokens.accessToken;
+    session.idToken = newTokens.id_token;
     // TODO: Update session cookie with new tokens
   }
 
-  // 3. Forward to AWS API with access token as Bearer
+  // 3. Forward to AWS API with ID token as Bearer
   const response = await fetch(`${process.env.AWS_API_BASE_URL}/players`, {
     headers: {
-      'Authorization': `Bearer ${session.accessToken}`,
+      'Authorization': `Bearer ${session.idToken}`,
       'Content-Type': 'application/json',
     },
   });
