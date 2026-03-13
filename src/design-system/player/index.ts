@@ -1,3 +1,7 @@
 // Player — player-specific components
-// Components will be exported here as they are built.
-export {};
+export { PlayerCardCompact } from './PlayerCardCompact';
+export { PlayerCardDetailed } from './PlayerCardDetailed';
+export { PlayerCompareTray } from './PlayerCompareTray';
+export { PlayerMiniCard } from './PlayerMiniCard';
+export { PlayerStatRow } from './PlayerStatRow';
+export type { PlayerData, PlayerStatsData, Position, InjuryStatus } from './types';
