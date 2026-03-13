@@ -24,19 +24,19 @@ export const LastWeek: Story = {
   args: { currentWeek: 18, totalWeeks: 18, onWeekChange: () => {} },
 };
 
-export const Interactive: Story = {
-  render: () => {
-    const [week, setWeek] = useState(7);
-    return (
-      <div className="flex flex-col items-center gap-4">
-        <WeekSelector currentWeek={week} onWeekChange={setWeek} />
-        <p className="text-sm text-brew-400">
-          Viewing week {week} data
-        </p>
-      </div>
-    );
-  },
-};
+function InteractiveStory() {
+  const [week, setWeek] = useState(7);
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <WeekSelector currentWeek={week} onWeekChange={setWeek} />
+      <p className="text-sm text-brew-400">
+        Viewing week {week} data
+      </p>
+    </div>
+  );
+}
+
+export const Interactive: Story = { render: () => <InteractiveStory /> };
 
 export const PlayoffWeeks: Story = {
   args: { currentWeek: 14, minWeek: 14, totalWeeks: 17, onWeekChange: () => {} },

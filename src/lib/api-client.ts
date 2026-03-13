@@ -1,4 +1,4 @@
-import type { Player, PlayerStats } from '@/types/player';
+import type { Player } from '@/types/player';
 
 interface ApiError {
   error: string;

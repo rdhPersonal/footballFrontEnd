@@ -25,6 +25,29 @@ const meta: Meta<typeof Select> = {
 export default meta;
 type Story = StoryObj<typeof Select>;
 
+function WithValueStory() {
+  const [value, setValue] = useState('wr');
+  return (
+    <div className="w-56">
+      <Select
+        options={positions}
+        label="Position"
+        value={value}
+        onValueChange={setValue}
+      />
+    </div>
+  );
+}
+
+function WeekSelectorStory() {
+  const [week, setWeek] = useState('14');
+  return (
+    <div className="w-36">
+      <Select options={weeks} value={week} onValueChange={setWeek} />
+    </div>
+  );
+}
+
 export const Default: Story = {
   render: () => (
     <div className="w-56">
@@ -41,21 +64,7 @@ export const WithLabel: Story = {
   ),
 };
 
-export const WithValue: Story = {
-  render: () => {
-    const [value, setValue] = useState('wr');
-    return (
-      <div className="w-56">
-        <Select
-          options={positions}
-          label="Position"
-          value={value}
-          onValueChange={setValue}
-        />
-      </div>
-    );
-  },
-};
+export const WithValue: Story = { render: () => <WithValueStory /> };
 
 export const WithError: Story = {
   render: () => (
@@ -77,13 +86,4 @@ export const Disabled: Story = {
   ),
 };
 
-export const WeekSelector: Story = {
-  render: () => {
-    const [week, setWeek] = useState('14');
-    return (
-      <div className="w-36">
-        <Select options={weeks} value={week} onValueChange={setWeek} />
-      </div>
-    );
-  },
-};
+export const WeekSelector: Story = { render: () => <WeekSelectorStory /> };

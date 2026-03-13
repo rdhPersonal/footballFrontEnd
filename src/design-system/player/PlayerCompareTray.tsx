@@ -4,7 +4,6 @@ import { X } from 'lucide-react';
 import { IconButton } from '../primitives/IconButton';
 import { StatSparkline } from '../data-display/StatSparkline';
 import { PlayerMiniCard } from './PlayerMiniCard';
-import { PlayerStatRow } from './PlayerStatRow';
 import { cn } from '../lib/cn';
 import type { PlayerData, PlayerStatsData } from './types';
 
