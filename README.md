@@ -6,7 +6,7 @@ A fantasy football application built with Next.js, featuring a custom design sys
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16.1.6 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS v4 (custom brew/vegas theme) |
 | Testing | Vitest + React Testing Library |

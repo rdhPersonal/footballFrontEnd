@@ -1,6 +1,6 @@
 # CLAUDE.md — Football Frontend
 
-This file documents the codebase as it exists today, plus conventions and guidance for all future work. Factual claims describe this branch unless stated otherwise. Planned/target architecture is clearly labeled in its own section.
+This file documents the codebase as it exists today, plus conventions and guidance for all future work. Factual claims describe master unless stated otherwise. Planned/target architecture is clearly labeled in its own section.
 
 ---
 
@@ -19,7 +19,7 @@ A **Next.js 16.1.6 (App Router)** fantasy football frontend with:
 
 ## Current Repo Snapshot
 
-What exists **on this branch today:**
+What exists **on master today:**
 
 - **Auth/BFF foundation** is complete: 4 auth routes (`login`, `callback`, `logout`, `session`), 4 player proxy routes, middleware route guard, `useSession` hook, typed API client
 - **Design system:** all 35 planned components are implemented across all 5 categories, each with tests and Storybook stories
@@ -44,7 +44,7 @@ What exists **on this branch today:**
 | Utilities | clsx, tailwind-merge, lucide-react | |
 | Fonts | Inter, JetBrains Mono | next/font/google |
 
-### NOT Installed on This Branch
+### NOT Installed on Master
 
 These are part of the target architecture but are not yet in `package.json`:
 - **TanStack Query** — client-side data fetching/caching
@@ -54,7 +54,7 @@ These are part of the target architecture but are not yet in `package.json`:
 
 ## Directory Structure
 
-What actually exists on this branch:
+What actually exists on master:
 
 ```
 src/
@@ -711,7 +711,7 @@ import { getPlayers } from '@/lib/api-client';
 
 ## Planned / Target Architecture
 
-Everything below is **future work**, not yet on this branch. It is separated here so AI assistants don't assume these things exist.
+Everything below is **future work**, not yet on master. It is separated here so AI assistants don't assume these things exist.
 
 ### Planned Dependencies (install when needed)
 
