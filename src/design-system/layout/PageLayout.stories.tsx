@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Home, Users, List, Trophy, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { PageLayout } from './PageLayout';
 import { Sidebar } from './Sidebar';

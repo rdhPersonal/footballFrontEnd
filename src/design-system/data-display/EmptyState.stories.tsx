@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Search, Users, Trophy, AlertCircle } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 

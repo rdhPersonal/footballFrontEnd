@@ -30,6 +30,7 @@ export function StatTable<TData>({
 }: StatTableProps<TData>): React.ReactElement {
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- false positive; @tanstack/react-table is React-compatible
   const table = useReactTable({
     data,
     columns,

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { LineupSlot } from './LineupSlot';
 
 const mahomes = { id: '1', name: 'Patrick Mahomes', position: 'QB' as const, teamAbbr: 'KC' };

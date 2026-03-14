@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { WaiverCard } from './WaiverCard';
 
 const meta: Meta<typeof WaiverCard> = {

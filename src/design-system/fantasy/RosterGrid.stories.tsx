@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { RosterGrid } from './RosterGrid';
 import type { RosterSlotConfig } from './types';
 

@@ -46,6 +46,7 @@ export function Avatar({
       aria-label={name}
     >
       {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- design system is app-agnostic; next/image is an app-layer concern
         <img
           src={src}
           alt={name}

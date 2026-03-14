@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { StatSparkline } from './StatSparkline';
 
 const weeklyPoints = [24.6, 18.2, 31.4, 12.8, 28.9, 22.1, 35.6, 19.3, 27.4];

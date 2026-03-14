@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Info, HelpCircle, AlertTriangle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { Badge } from './Badge';
