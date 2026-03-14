@@ -50,7 +50,7 @@ export const OverBadge: Story = {
   render: () => (
     <div className="flex items-center justify-center p-16">
       <Tooltip content="Questionable — limited practice Wednesday" delayDuration={0}>
-        <Badge variant="warning">Q</Badge>
+        <Badge variant="status" status="questionable">Q</Badge>
       </Tooltip>
     </div>
   ),

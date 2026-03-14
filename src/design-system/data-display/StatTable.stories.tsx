@@ -32,15 +32,20 @@ const data: PlayerRow[] = [
   { rank: 8, name: 'Mark Andrews', team: 'BAL', position: 'TE', points: 22.8, projected: 16.3, trend: '↑' },
 ];
 
-const meta: Meta<typeof StatTable> = {
+// Storybook can't infer concrete args for the generic table component, so we bind it to PlayerRow here.
+function PlayerStatTable(props: React.ComponentProps<typeof StatTable<PlayerRow>>): React.ReactElement {
+  return <StatTable<PlayerRow> {...props} />;
+}
+
+const meta: Meta<typeof PlayerStatTable> = {
   title: 'Data Display/StatTable',
-  component: StatTable,
+  component: PlayerStatTable,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
 };
 
 export default meta;
-type Story = StoryObj<typeof StatTable>;
+type Story = StoryObj<typeof PlayerStatTable>;
 
 export const Default: Story = {
   args: { columns, data },
