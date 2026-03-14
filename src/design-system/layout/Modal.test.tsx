@@ -44,12 +44,14 @@ describe('Modal', () => {
   it('renders description when provided', () => {
     renderModal({ description: 'This action cannot be undone.' });
     expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription('This action cannot be undone.');
   });
 
   it('does not render description element when not provided', () => {
     renderModal({ description: undefined });
     // No paragraph with the brew-400 description style
     expect(screen.queryByText('This action cannot be undone.')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
   });
 
   // --- Close button ---

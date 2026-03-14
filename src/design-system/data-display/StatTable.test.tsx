@@ -53,8 +53,8 @@ describe('StatTable', () => {
     it('sorts rows descending on first click (numeric default)', () => {
       render(<StatTable columns={columns} data={data} />);
       // TanStack Table sorts numeric columns descending-first by default
-      const ptsHeader = screen.getByRole('columnheader', { name: /pts/i });
-      fireEvent.click(ptsHeader);
+      const ptsSortButton = screen.getByRole('button', { name: /pts/i });
+      fireEvent.click(ptsSortButton);
 
       const rows = screen.getAllByRole('row').slice(1); // skip header row
       expect(rows[0]).toHaveTextContent('41.6'); // highest first
@@ -63,9 +63,9 @@ describe('StatTable', () => {
 
     it('sorts rows ascending on second click', () => {
       render(<StatTable columns={columns} data={data} />);
-      const ptsHeader = screen.getByRole('columnheader', { name: /pts/i });
-      fireEvent.click(ptsHeader); // descending
-      fireEvent.click(ptsHeader); // ascending
+      const ptsSortButton = screen.getByRole('button', { name: /pts/i });
+      fireEvent.click(ptsSortButton); // descending
+      fireEvent.click(ptsSortButton); // ascending
 
       const rows = screen.getAllByRole('row').slice(1);
       expect(rows[0]).toHaveTextContent('28.1'); // lowest first
@@ -74,16 +74,40 @@ describe('StatTable', () => {
     it('sets aria-sort="descending" after one click', () => {
       render(<StatTable columns={columns} data={data} />);
       const ptsHeader = screen.getByRole('columnheader', { name: /pts/i });
-      fireEvent.click(ptsHeader);
+      fireEvent.click(screen.getByRole('button', { name: /pts/i }));
       expect(ptsHeader).toHaveAttribute('aria-sort', 'descending');
     });
 
     it('sets aria-sort="ascending" after two clicks', () => {
       render(<StatTable columns={columns} data={data} />);
       const ptsHeader = screen.getByRole('columnheader', { name: /pts/i });
-      fireEvent.click(ptsHeader);
-      fireEvent.click(ptsHeader);
+      const ptsSortButton = screen.getByRole('button', { name: /pts/i });
+      fireEvent.click(ptsSortButton);
+      fireEvent.click(ptsSortButton);
       expect(ptsHeader).toHaveAttribute('aria-sort', 'ascending');
+    });
+
+    it('renders sortable headers as keyboard-focusable buttons', () => {
+      render(<StatTable columns={columns} data={data} />);
+      expect(screen.getByRole('button', { name: /pts/i })).toBeInTheDocument();
+    });
+
+    it('sorts rows when the header button is activated from the keyboard', async () => {
+      const user = userEvent.setup();
+      render(<StatTable columns={columns} data={data} />);
+      const ptsSortButton = screen.getByRole('button', { name: /pts/i });
+
+      ptsSortButton.focus();
+      expect(ptsSortButton).toHaveFocus();
+
+      await user.keyboard('[Enter]');
+
+      const rows = screen.getAllByRole('row').slice(1);
+      expect(rows[0]).toHaveTextContent('41.6');
+      expect(screen.getByRole('columnheader', { name: /pts/i })).toHaveAttribute(
+        'aria-sort',
+        'descending',
+      );
     });
   });
 

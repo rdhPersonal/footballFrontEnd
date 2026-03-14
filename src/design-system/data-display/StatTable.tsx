@@ -54,15 +54,14 @@ export function StatTable<TData>({
                 {headerGroup.headers.map((header) => {
                   const sorted = header.column.getIsSorted();
                   const canSort = header.column.getCanSort();
+                  const headerContent = header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext());
                   return (
                     <th
                       key={header.id}
                       scope="col"
-                      className={cn(
-                        'px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-brew-400',
-                        canSort && 'cursor-pointer select-none hover:text-brew-200 transition-colors duration-150',
-                      )}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-brew-400"
                       aria-sort={
                         sorted === 'asc'
                           ? 'ascending'
@@ -73,11 +72,17 @@ export function StatTable<TData>({
                               : undefined
                       }
                     >
-                      <span className="flex items-center gap-1">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                        {canSort && (
+                      {canSort ? (
+                        <button
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                          className={cn(
+                            'flex w-full items-center gap-1 rounded-sm text-left',
+                            'cursor-pointer select-none transition-colors duration-150 hover:text-brew-200',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vegas-gold focus-visible:ring-inset',
+                          )}
+                        >
+                          {headerContent}
                           <span aria-hidden className="shrink-0 text-brew-600">
                             {sorted === 'asc' ? (
                               <ChevronUp className="h-3 w-3" />
@@ -87,8 +92,12 @@ export function StatTable<TData>({
                               <ChevronsUpDown className="h-3 w-3" />
                             )}
                           </span>
-                        )}
-                      </span>
+                        </button>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          {headerContent}
+                        </span>
+                      )}
                     </th>
                   );
                 })}
