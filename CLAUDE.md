@@ -1,6 +1,6 @@
 # CLAUDE.md — Football Frontend
 
-This file documents the codebase as it exists today, plus conventions and guidance for all future work. Factual claims describe master unless stated otherwise. Planned/target architecture is clearly labeled in its own section.
+This file documents the codebase as it exists today, plus conventions and guidance for all future work. Factual claims describe this branch unless stated otherwise. Planned/target architecture is clearly labeled in its own section.
 
 ---
 
@@ -19,14 +19,13 @@ A **Next.js 16.1.6 (App Router)** fantasy football frontend with:
 
 ## Current Repo Snapshot
 
-What exists **on master today:**
+What exists **on this branch today:**
 
 - **Auth/BFF foundation** is complete: 4 auth routes (`login`, `callback`, `logout`, `session`), 4 player proxy routes, middleware route guard, `useSession` hook, typed API client
-- **Design system:** only `Button` and `Badge` are implemented (with tests + Storybook stories)
-- **Category barrels** for `player/`, `data-display/`, `layout/`, and `fantasy/` exist as empty placeholders (`export {}`)
+- **Design system:** all 35 planned components are implemented across all 5 categories, each with tests and Storybook stories
 - **Home page** (`src/app/page.tsx`) is a placeholder heading
 - **No feature pages** exist yet — no `/roster`, `/players`, `/matchups`, `/waivers`, `/trades`
-- **`test-setup.ts`** only loads `@testing-library/jest-dom/vitest` (no Radix polyfills yet)
+- **`test-setup.ts`** includes `@testing-library/jest-dom/vitest` plus Radix UI pointer capture polyfills
 
 ### Installed Dependencies
 
@@ -36,6 +35,8 @@ What exists **on master today:**
 | Runtime | React | 19.2.3 |
 | Language | TypeScript | ^5 |
 | Styling | Tailwind CSS | v4 |
+| Component primitives | Radix UI | (select, dialog, tabs, switch, tooltip) |
+| Tables | TanStack Table | ^8 |
 | Testing | Vitest + React Testing Library | ^4 / ^16 |
 | Test DOM | happy-dom | ^20 |
 | Visual Dev | Storybook (Vite) | ^8 |
@@ -43,19 +44,17 @@ What exists **on master today:**
 | Utilities | clsx, tailwind-merge, lucide-react | |
 | Fonts | Inter, JetBrains Mono | next/font/google |
 
-### NOT Installed on Master
+### NOT Installed on This Branch
 
 These are part of the target architecture but are not yet in `package.json`:
-- **Radix UI** — accessible headless component primitives
 - **TanStack Query** — client-side data fetching/caching
-- **TanStack Table** — sorting, filtering, pagination
 - **eslint-plugin-boundaries** — import boundary enforcement
 
 ---
 
 ## Directory Structure
 
-What actually exists on master:
+What actually exists on this branch:
 
 ```
 src/
@@ -76,11 +75,11 @@ src/
 │               ├── stats/route.ts       # Player statistics
 │               └── roster-history/route.ts  # Roster transitions
 ├── design-system/
-│   ├── primitives/               # Button, Badge (implemented)
-│   ├── player/                   # placeholder barrel
-│   ├── data-display/             # placeholder barrel
-│   ├── layout/                   # placeholder barrel
-│   ├── fantasy/                  # placeholder barrel
+│   ├── primitives/               # Button, Badge, Avatar, IconButton, Input, Select, Toggle, Tooltip, Divider, Skeleton
+│   ├── player/                   # PlayerStatRow, PlayerMiniCard, PlayerCardCompact, PlayerCardDetailed, PlayerCompareTray
+│   ├── data-display/             # EmptyState, StatBar, StatSparkline, ScoreIndicator, RankBadge, MatchupDifficulty, StatTable
+│   ├── layout/                   # Card, Modal, Tabs, Sidebar, TopNav, PageLayout, Section
+│   ├── fantasy/                  # LineupSlot, RosterGrid, MatchupCard, WaiverCard, WeekSelector
 │   ├── tokens/                   # Color and typography constants
 │   ├── lib/cn.ts                 # clsx + tailwind-merge utility
 │   └── index.ts                  # Barrel export — the ONLY import point for consumers
@@ -96,7 +95,7 @@ src/
 │   ├── league.ts                 # LeagueTeam, Matchup, League
 │   └── index.ts
 ├── middleware.ts                  # Auth guard + public path allowlist
-└── test-setup.ts                 # Vitest + jest-dom setup
+└── test-setup.ts                 # Vitest + jest-dom + Radix pointer polyfills
 .storybook/
 ├── main.ts                       # Storybook config (Vite builder)
 └── preview.ts                    # Theme backgrounds (brew-950 dark background)
@@ -271,7 +270,7 @@ export function MyComponent({
 - Use variant props (named strings), not raw class strings passed from outside.
 - Keep prop interfaces minimal — prefer composition over configuration.
 - Components are **stateless/controlled** by default. Internal state is acceptable only for UI concerns (open/closed, hover, focus). Data and selection state are always controlled via props.
-- When building complex widgets (modals, dropdowns, tooltips), use Radix UI or React Aria primitives for accessibility.
+- When building complex widgets (modals, dropdowns, tooltips), use Radix UI primitives for accessibility.
 - All interactive components must be keyboard navigable. Use semantic HTML (`button`, `nav`, `table`, `th`, `td`) — not divs with click handlers.
 - Color alone must never convey meaning — pair with icons or text (e.g., injury status).
 
@@ -467,11 +466,9 @@ describe('MyComponent', () => {
 
 ### Testing Gotchas
 
-These apply when using Radix UI and TanStack Table (not yet installed on master, but relevant for branches that add them).
-
 **Radix UI components in happy-dom:**
 
-Radix UI uses `hasPointerCapture` / `setPointerCapture` / `releasePointerCapture` internally. happy-dom doesn't implement these. When you install Radix UI, add polyfills to `src/test-setup.ts`:
+Radix UI uses `hasPointerCapture` / `setPointerCapture` / `releasePointerCapture` internally. happy-dom doesn't implement these. Polyfills are already in `src/test-setup.ts`:
 
 ```ts
 if (typeof window !== 'undefined') {
@@ -588,11 +585,11 @@ export const Default: Story = { args: { variant: 'primary' } };
 
 | Category | Components |
 |---|---|
-| `Primitives/` | Button, Badge, and future primitives |
-| `Player/` | Player-specific cards and rows |
-| `Data Display/` | Tables, charts, indicators |
-| `Layout/` | Cards, modals, navigation |
-| `Fantasy/` | Fantasy football composites |
+| `Primitives/` | Button, Badge, Avatar, IconButton, Input, Select, Toggle, Tooltip, Divider, Skeleton |
+| `Player/` | PlayerStatRow, PlayerMiniCard, PlayerCardCompact, PlayerCardDetailed, PlayerCompareTray |
+| `Data Display/` | EmptyState, StatBar, StatSparkline, ScoreIndicator, RankBadge, MatchupDifficulty, StatTable |
+| `Layout/` | Card, Modal, Tabs, Sidebar, TopNav, PageLayout, Section |
+| `Fantasy/` | LineupSlot, RosterGrid, MatchupCard, WaiverCard, WeekSelector |
 
 ### What Every Story Must Include
 
@@ -714,30 +711,14 @@ import { getPlayers } from '@/lib/api-client';
 
 ## Planned / Target Architecture
 
-Everything below is **future work**, not yet on master. It is separated here so AI assistants don't assume these things exist.
-
-### In-Flight Work
-
-- A large design-system branch is in progress and adds the planned component categories plus Radix UI and TanStack Table support. Check current open PRs or branches before assuming that work has merged.
+Everything below is **future work**, not yet on this branch. It is separated here so AI assistants don't assume these things exist.
 
 ### Planned Dependencies (install when needed)
 
 | Package | Purpose |
 |---|---|
-| Radix UI | Accessible headless primitives (modals, dropdowns, selects, tooltips) |
 | TanStack Query | Client-side data caching, mutations, optimistic updates |
-| TanStack Table | Sorting, filtering, pagination for stat tables |
 | eslint-plugin-boundaries | Enforce design-system/app import boundary at lint time |
-
-### Target Design System (35 components)
-
-| Category | Components |
-|---|---|
-| **Primitives** (11) | Button, Badge, Avatar, IconButton, Input, Select, Toggle, Tooltip, Divider, Skeleton |
-| **Layout** (7) | Card, Modal, Tabs, Sidebar, TopNav, PageLayout, Section |
-| **Data Display** (7) | EmptyState, StatBar, StatSparkline, ScoreIndicator, RankBadge, MatchupDifficulty, StatTable |
-| **Player** (5) | PlayerStatRow, PlayerMiniCard, PlayerCardCompact, PlayerCardDetailed, PlayerCompareTray |
-| **Fantasy** (5) | LineupSlot, RosterGrid, MatchupCard, WaiverCard, WeekSelector |
 
 ### Planned Pages
 
@@ -803,4 +784,4 @@ Everything below is **future work**, not yet on master. It is separated here so 
 - **Don't use `any`** — use `unknown` with type guards
 - **Don't use default exports** — except Next.js pages/layouts and Storybook `meta`
 - **Don't commit `.env.local`** — never commit real secret values
-- **Don't assume planned components/pages exist** — check the repo before building on top of unimplemented features
+- **Don't assume planned pages/features exist** — check the repo before building on top of unimplemented features
