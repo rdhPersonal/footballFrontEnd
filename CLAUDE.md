@@ -609,11 +609,11 @@ The app uses **Cognito PKCE Authorization Code Flow**. Tokens never reach the br
 
 1. `GET /api/auth/login` — Generate PKCE verifier + S256 challenge, redirect to Cognito Hosted UI
 2. Cognito redirects to `GET /api/auth/callback?code=...`
-3. Callback exchanges auth code for tokens **server-side**, stores in iron-session encrypted HTTP-only cookie (30-day, SameSite=Strict)
+3. Callback exchanges auth code for tokens **server-side**, stores them in the iron-session encrypted HTTP-only cookie (30-day, SameSite=Lax)
 4. `GET /api/auth/session` — Returns current user info decoded from ID token
 5. `GET /api/auth/logout` — Destroys cookie, redirects to Cognito logout
 
-`src/middleware.ts` guards all routes except the public allowlist (`/api/auth/login`, `/api/auth/callback`). Page routes redirect to login; API routes return 401.
+`src/middleware.ts` guards page routes and API routes, but treats all `/api/auth/*` routes plus `/_next/*` and `/favicon.ico` as public. Page routes redirect to login; protected API routes return 401.
 
 ### Security Properties
 
@@ -621,7 +621,7 @@ The app uses **Cognito PKCE Authorization Code Flow**. Tokens never reach the br
 - Browser only has an encrypted HTTP-only cookie — JS cannot read it
 - Refresh tokens are server-side only, never exposed to the browser
 - PKCE prevents authorization code interception attacks
-- SameSite=Strict cookie mitigates CSRF
+- SameSite=Lax on the session cookie helps limit CSRF while still allowing the auth redirect flow to complete
 
 ### Token Types
 
@@ -654,21 +654,39 @@ The client-side API functions live in `src/lib/api-client.ts`. They call `/api/*
 ```typescript
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // 1. Validate session
-  const session = await getSession(request);
-  if (!session?.idToken) {
+  const session = await getSession();
+  if (!session.idToken) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // 2. Refresh ID token if expired
-  if (isTokenExpired(session.idToken)) {
+  if (isTokenExpired(session.expiresAt)) {
     const newTokens = await refreshTokens(session.refreshToken);
-    if (!newTokens) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+    if (!newTokens) {
+      session.destroy();
+      return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+    }
+
     session.idToken = newTokens.id_token;
+    session.accessToken = newTokens.access_token;
+    if (newTokens.refresh_token) {
+      session.refreshToken = newTokens.refresh_token;
+    }
+
+    const payload = decodeTokenPayload(newTokens.id_token);
+    session.expiresAt =
+      (payload?.exp as number) ??
+      Math.floor(Date.now() / 1000) + newTokens.expires_in;
+
+    await session.save();
   }
 
   // 3. Forward to AWS API with ID token as Bearer
   const response = await fetch(`${process.env.AWS_API_BASE_URL}/players`, {
-    headers: { 'Authorization': `Bearer ${session.idToken}` },
+    headers: {
+      'Authorization': `Bearer ${session.idToken}`,
+      'Content-Type': 'application/json',
+    },
   });
 
   if (!response.ok) {
@@ -700,7 +718,7 @@ Everything below is **future work**, not yet on master. It is separated here so 
 
 ### In-Flight Work
 
-- **PR #2** (`claude/design-system-components-8od7k`, draft): adds 35 design system components across 5 categories with Radix UI, TanStack Query, and TanStack Table as new dependencies, plus 395 tests and full Storybook coverage
+- A large design-system branch is in progress and adds the planned component categories plus Radix UI and TanStack Table support. Check current open PRs or branches before assuming that work has merged.
 
 ### Planned Dependencies (install when needed)
 
@@ -765,10 +783,7 @@ Everything below is **future work**, not yet on master. It is separated here so 
 | 2026-03-01 | Use iron-session for encrypted cookies | Keeps tokens server-side only, no XSS exposure |
 | 2026-03-01 | Upgrade Lambda to Node.js 22.x | AWS ending Node 20 support April 30, 2026 |
 | 2026-03-01 | Phase 1 focuses on auth + BFF first | Frontend can't do anything useful without backend connectivity |
-| 2026-03-13 | Player types defined in `player/types.ts` not `src/types/` | Design system cannot import from app code — one-way boundary requires local type definitions |
-| 2026-03-13 | Use `fireEvent` (not `userEvent`) for Radix UI components in tests | `userEvent` pointer event sequence doesn't trigger Radix UI's `onPointerDown` handlers in happy-dom |
-| 2026-03-13 | Tooltip hover tests omitted; covered by Storybook only | happy-dom doesn't fire Radix Tooltip portal open on `userEvent.hover`; structural tests only |
-| 2026-03-13 | TanStack Table sorts numeric columns descending-first | Default `sortDescFirst: true` for numeric columns — tests must assert descending order on first click |
+| 2026-03-13 | Complex design-system components may need local type definitions | Keep the design system independent from app-layer imports, even when that means duplicating narrowly scoped types |
 
 ---
 
@@ -780,7 +795,7 @@ Everything below is **future work**, not yet on master. It is separated here so 
 - **Don't send access tokens to AWS APIs** — always use ID tokens (audience mismatch)
 - **Don't expose tokens to the browser** — session cookie is the only auth artifact the browser sees
 - **Don't use `getByTestId`** in tests unless there's no semantic alternative
-- **Don't use `fireEvent` for standard interactions** — use `userEvent`; exception: Radix UI components and TanStack Table headers require `fireEvent` in happy-dom
+- **Don't use `fireEvent` for standard interactions** — use `userEvent`; if a third-party widget needs lower-level events in tests, document the reason near the test
 - **Don't test CSS class names or implementation details** — test behavior
 - **Don't use CSS modules, CSS-in-JS, or inline `style` attributes** — Tailwind utilities only
 - **Don't use raw hex values or default Tailwind colors** — use project tokens (`brew-*`, `vegas-*`)
