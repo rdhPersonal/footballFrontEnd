@@ -1,4 +1,13 @@
-import type { Player } from '@/types/player';
+import type {
+  Player,
+  NflTeam,
+  PassingStat,
+  RushingStat,
+  ReceivingStat,
+  KickingStat,
+  ScoringConfig,
+  SeasonSummary,
+} from '@/types/player';
 
 interface ApiError {
   error: string;
@@ -36,6 +45,7 @@ async function fetchBff<T>(path: string): Promise<T> {
 
 export interface PlayersResponse {
   players: Player[];
+  totalCount: number;
   count: number;
   limit: number;
   offset: number;
@@ -87,16 +97,10 @@ export async function getPlayer(id: string): Promise<PlayerDetail> {
 
 export interface PlayerStatsResponse {
   playerId: string;
-  stats: Array<{
-    season: number;
-    week: number;
-    teamAbbr: string;
-    gamesPlayed: number;
-    totalPoints: number;
-    projectedPoints: number | null;
-    statDetails: Record<string, unknown>;
-  }>;
-  count: number;
+  passing: PassingStat[];
+  rushing: RushingStat[];
+  receiving: ReceivingStat[];
+  kicking: KickingStat[];
 }
 
 export interface PlayerStatsParams {
@@ -133,6 +137,75 @@ export interface RosterHistoryResponse {
 
 export async function getPlayerRosterHistory(id: string): Promise<RosterHistoryResponse> {
   return fetchBff<RosterHistoryResponse>(`/api/players/${id}/roster-history`);
+}
+
+// --- Player Scores ---
+
+export interface PlayerScoresResponse {
+  playerId: string;
+  season: number;
+  scoringFormat: string;
+  totalPoints: number;
+  weeks: Array<{
+    week: number;
+    teamAbbr: string;
+    points: number;
+  }>;
+}
+
+export interface PlayerScoresParams {
+  season: number;
+  scoring?: string;
+}
+
+export async function getPlayerScores(
+  id: string,
+  params: PlayerScoresParams,
+): Promise<PlayerScoresResponse> {
+  const query = new URLSearchParams();
+  query.set('season', String(params.season));
+  if (params.scoring) query.set('scoring', params.scoring);
+
+  return fetchBff<PlayerScoresResponse>(`/api/players/${id}/scores?${query.toString()}`);
+}
+
+// --- Scoring Configs ---
+
+export interface ScoringConfigsResponse {
+  configs: ScoringConfig[];
+}
+
+export async function getScoringConfigs(): Promise<ScoringConfigsResponse> {
+  return fetchBff<ScoringConfigsResponse>('/api/scoring-configs');
+}
+
+// --- Teams ---
+
+export interface TeamsResponse {
+  teams: NflTeam[];
+  count: number;
+}
+
+export interface TeamsParams {
+  season?: number;
+}
+
+export async function getTeams(params: TeamsParams = {}): Promise<TeamsResponse> {
+  const query = new URLSearchParams();
+  if (params.season) query.set('season', String(params.season));
+
+  const qs = query.toString();
+  return fetchBff<TeamsResponse>(`/api/teams${qs ? `?${qs}` : ''}`);
+}
+
+// --- Seasons ---
+
+export interface SeasonsResponse {
+  seasons: SeasonSummary[];
+}
+
+export async function getSeasons(): Promise<SeasonsResponse> {
+  return fetchBff<SeasonsResponse>('/api/seasons');
 }
 
 export { ApiClientError };
