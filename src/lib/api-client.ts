@@ -192,7 +192,7 @@ export interface TeamsParams {
 
 export async function getTeams(params: TeamsParams = {}): Promise<TeamsResponse> {
   const query = new URLSearchParams();
-  if (params.season) query.set('season', String(params.season));
+  if (params.season !== undefined) query.set('season', String(params.season));
 
   const qs = query.toString();
   return fetchBff<TeamsResponse>(`/api/teams${qs ? `?${qs}` : ''}`);
