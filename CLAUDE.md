@@ -563,7 +563,7 @@ type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
 Stories live alongside components: `Button.stories.tsx` next to `Button.tsx`. Stories are for **design system components only** — not app pages or feature modules.
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { MyComponent } from './MyComponent';
 
 const meta: Meta<typeof MyComponent> = {

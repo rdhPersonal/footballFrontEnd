@@ -1,6 +1,7 @@
 // Primitives — atomic building blocks
 export { Avatar } from './Avatar';
 export { Badge } from './Badge';
+export { Checkbox } from './Checkbox';
 export { Button } from './Button';
 export { Divider } from './Divider';
 export { IconButton } from './IconButton';
