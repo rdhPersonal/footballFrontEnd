@@ -30,7 +30,8 @@ async function fetchBff<T>(path: string): Promise<T> {
   if (!response.ok) {
     if (response.status === 401) {
       if (typeof window !== 'undefined') {
-        window.location.href = '/api/auth/login';
+        const returnTo = `${window.location.pathname}${window.location.search}`;
+        window.location.href = `/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
       }
       throw new ApiClientError('Unauthorized', 401);
     }

@@ -11,7 +11,7 @@ const PUBLIC_PATHS = [
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (pathname === '/' || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   if (!session.idToken) {
     const loginUrl = new URL('/api/auth/login', request.url);
-    loginUrl.searchParams.set('returnTo', pathname);
+    loginUrl.searchParams.set('returnTo', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
