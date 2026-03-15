@@ -12,7 +12,7 @@ import type {
   GetSeasonsResponse as SeasonsResponse,
   GetTeamsQuery as TeamsParams,
   GetTeamsResponse as TeamsResponse,
-} from '@football/api-contract';
+} from '@/types/api-contract';
 
 class ApiClientError extends Error {
   constructor(

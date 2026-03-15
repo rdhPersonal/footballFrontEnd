@@ -9,7 +9,7 @@ import type {
   RushingStatsDto,
   ScoringConfigDto,
   SeasonsSummaryDto,
-} from '@football/api-contract';
+} from '@/types/api-contract';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowLeft, BarChart3, CalendarRange, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
