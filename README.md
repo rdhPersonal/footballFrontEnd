@@ -2,6 +2,8 @@
 
 A fantasy football application built with Next.js, featuring a custom design system with a dark, luxurious aesthetic — witches brew meets Las Vegas class.
 
+API request/response DTOs come from `@football/api-contract`, owned by the backend repo. This frontend should not duplicate backend contract types locally.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -28,8 +30,20 @@ src/
 │   └── index.ts            # Public API barrel export
 ├── features/               # App-specific hooks and logic
 ├── lib/                    # Shared utilities
-└── types/                  # Shared TypeScript types
+└── types/                  # Frontend-only app types (league/domain UI types)
 ```
+
+## API Contract
+
+- `@football/api-contract` is the source of truth for backend-facing DTOs.
+- In this shared local workspace, the frontend resolves `@football/api-contract` from `../footballBackEnd/packages/api-contract/src/index.ts` via `tsconfig.json`.
+- Do not recreate backend DTOs in `src/types/`.
+- Run `npm run check:api-contract` to catch accidental local DTO reintroduction.
+
+### Versioning Strategy
+
+- Today: local sibling-repo reference for development in the shared workspace.
+- When the repos need standalone CI/deployment: publish `@football/api-contract` and pin the frontend to an exact SemVer version.
 
 ## Design System
 
@@ -63,6 +77,9 @@ npm run storybook
 
 # Production build
 npm run build
+
+# Guard against duplicated backend DTOs
+npm run check:api-contract
 ```
 
 ## Architecture Principles
@@ -72,3 +89,4 @@ npm run build
 - **TDD** — Red-Green-Refactor for all behavioral code
 - **Server Components by default** — pages fetch data server-side; interactive design system components use `'use client'`
 - **Thin BFF** — `src/app/api/` proxies to AWS backend; no business logic in this repo
+- **Shared contract** — backend DTOs are imported from `@football/api-contract`, not duplicated in frontend source

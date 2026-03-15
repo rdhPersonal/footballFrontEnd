@@ -19,10 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@football/api-contract": ["../footballBackEnd/packages/api-contract/src/index.ts"]
     }
   },
   "include": [
+    "../footballBackEnd/packages/api-contract/src/**/*.ts",
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",

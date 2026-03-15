@@ -1,4 +1,4 @@
-import type { Player } from './player';
+import type { PlayerDto as Player } from '@football/api-contract';
 
 export interface LeagueTeam {
   id: string;

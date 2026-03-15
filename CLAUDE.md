@@ -13,7 +13,7 @@ A **Next.js 16.1.6 (App Router)** fantasy football frontend with:
 - "Witches Brew x Vegas Class" dark theme (dark mode only)
 - Deployed on **Vercel** (zero-config, preview deploys per branch)
 
-**This is a single-repo, single-package project.** No monorepo, no Turborepo, no workspaces. One `package.json`, one `next build`, one deploy. The design system is colocated as a directory (`src/design-system/`), not a separate package.
+**This is a single deployable frontend package.** The only cross-repo dependency is the shared backend DTO contract exposed as `@football/api-contract` from the sibling `footballBackEnd` repo in the shared local workspace. The design system is colocated as a directory (`src/design-system/`), not a separate package.
 
 ---
 
@@ -22,6 +22,7 @@ A **Next.js 16.1.6 (App Router)** fantasy football frontend with:
 What exists **on master today:**
 
 - **Auth/BFF foundation** is complete: 4 auth routes (`login`, `callback`, `logout`, `session`), 4 player proxy routes, middleware route guard, `useSession` hook, typed API client
+- **Shared API DTOs** come from `@football/api-contract` in the backend repo; frontend should not duplicate backend response/request types locally
 - **Design system:** all 35 planned components are implemented across all 5 categories, each with tests and Storybook stories
 - **Home page** (`src/app/page.tsx`) is a placeholder heading
 - **No feature pages** exist yet — no `/roster`, `/players`, `/matchups`, `/waivers`, `/trades`
@@ -87,12 +88,11 @@ src/
 │   └── auth/useSession.ts        # Client session hook
 ├── lib/
 │   ├── session.ts                # iron-session wrapper + JWT decode
-│   ├── api-client.ts             # Typed BFF API client
+│   ├── api-client.ts             # Typed BFF API client using @football/api-contract
 │   ├── bff-proxy.ts              # AWS proxy with auto token refresh
 │   └── constants.ts              # Fantasy football rules (season length, roster slots)
 ├── types/
-│   ├── player.ts                 # Position, InjuryStatus, Player, PlayerStats
-│   ├── league.ts                 # LeagueTeam, Matchup, League
+│   └── league.ts                 # Frontend-only league view types
 │   └── index.ts
 ├── middleware.ts                  # Auth guard + public path allowlist
 └── test-setup.ts                 # Vitest + jest-dom + Radix pointer polyfills
@@ -110,6 +110,7 @@ npm run dev           # Next.js dev server (http://localhost:3000)
 npm run build         # Production build
 npm run start         # Run production server
 npm run lint          # ESLint check
+npm run check:api-contract  # Fail if backend DTOs are redefined locally
 npm run test          # Vitest in watch mode
 npm run test:run      # Single test run (CI)
 npm run test:ui       # Vitest UI dashboard
@@ -207,6 +208,13 @@ API route handlers in `src/app/api/` are thin proxies — no business logic:
 - Return the response
 
 > **Critical:** The AWS API Gateway JWT authorizer validates **ID tokens** (not access tokens). Cognito access tokens set the audience to the User Pool URL, but the authorizer checks against the **client ID**, which only matches ID tokens. Always send the ID token as Bearer.
+
+### 4a. API Contract Source Of Truth
+
+- Import backend DTOs from `@football/api-contract`.
+- Do not recreate backend-facing request/response types in `src/types/`.
+- In this shared local workspace, `@football/api-contract` resolves to `../footballBackEnd/packages/api-contract/src/index.ts` via `tsconfig.json`.
+- If the repos need standalone CI or deployment, publish `@football/api-contract` and pin the frontend to an exact SemVer version instead of relying on the local workspace path.
 
 ### 5. Test-Driven for Behavioral Code
 
