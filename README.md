@@ -2,7 +2,7 @@
 
 A fantasy football application built with Next.js, featuring a custom design system with a dark, luxurious aesthetic — witches brew meets Las Vegas class.
 
-API request/response DTOs come from `@football/api-contract`, owned by the backend repo. This frontend should not duplicate backend contract types locally.
+API request/response DTOs are maintained locally in `src/types/api-contract.ts`, kept in sync with the backend repo (`footballBackEnd`) manually when contract changes occur.
 
 ## Tech Stack
 
@@ -35,15 +35,18 @@ src/
 
 ## API Contract
 
-- `@football/api-contract` is the source of truth for backend-facing DTOs.
-- In this shared local workspace, the frontend resolves `@football/api-contract` from `../footballBackEnd/packages/api-contract/src/index.ts` via `tsconfig.json`.
-- Do not recreate backend DTOs in `src/types/`.
-- Run `npm run check:api-contract` to catch accidental local DTO reintroduction.
+API contract types live in `src/types/api-contract.ts`. This is the frontend's local copy of the backend DTO definitions, kept in sync manually with `footballBackEnd/packages/api-contract/src/index.ts`.
 
-### Versioning Strategy
+### Sync Process
 
-- Today: local sibling-repo reference for development in the shared workspace.
-- When the repos need standalone CI/deployment: publish `@football/api-contract` and pin the frontend to an exact SemVer version.
+When the backend adds or changes an endpoint:
+1. Update `src/types/api-contract.ts` to match the backend contract
+2. Update the `Last synced` date and version comment at the top of the file
+3. The backend repo (`footballBackEnd`) is the source of truth for the contract shape
+
+### Why Local Types (not a shared package)
+
+This frontend deploys to Vercel, which builds from this repo alone. A cross-repo workspace dependency (`@football/api-contract`) created build complexity since Vercel cannot resolve sibling-repo paths. Since this is the only frontend client, a local copy with manual sync is simpler and more reliable.
 
 ## Design System
 
@@ -78,8 +81,6 @@ npm run storybook
 # Production build
 npm run build
 
-# Guard against duplicated backend DTOs
-npm run check:api-contract
 ```
 
 ## Architecture Principles
@@ -89,4 +90,4 @@ npm run check:api-contract
 - **TDD** — Red-Green-Refactor for all behavioral code
 - **Server Components by default** — pages fetch data server-side; interactive design system components use `'use client'`
 - **Thin BFF** — `src/app/api/` proxies to AWS backend; no business logic in this repo
-- **Shared contract** — backend DTOs are imported from `@football/api-contract`, not duplicated in frontend source
+- **Local contract copy** — backend DTOs are maintained in `src/types/api-contract.ts`, synced manually with the backend repo

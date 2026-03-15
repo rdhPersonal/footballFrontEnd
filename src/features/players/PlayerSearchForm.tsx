@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import type { GetPlayersQuery, SeasonsSummaryDto, TeamDto } from '@football/api-contract';
+import type { GetPlayersQuery, SeasonsSummaryDto, TeamDto } from '@/types/api-contract';
 import { Button, Card, Input, Select } from '@/design-system';
 import { getSeasons, getTeams } from '@/lib/api-client';
 import { buildPlayerSearchHref, type PlayerSearchFilters } from '@/features/players/search-params';

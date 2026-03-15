@@ -1,6 +1,6 @@
 'use client';
 
-import type { PlayerDto } from '@football/api-contract';
+import type { PlayerDto } from '@/types/api-contract';
 import type { ColumnDef } from '@tanstack/react-table';
 import { SearchX } from 'lucide-react';
 import Link from 'next/link';

@@ -1,4 +1,4 @@
-import type { GetPlayersQuery } from '@football/api-contract';
+import type { GetPlayersQuery } from '@/types/api-contract';
 
 type SearchParamValue = string | string[] | undefined;
 
