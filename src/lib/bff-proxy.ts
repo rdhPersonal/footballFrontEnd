@@ -28,7 +28,6 @@ export async function proxyToAws(
     }
 
     session.idToken = newTokens.id_token;
-    session.accessToken = newTokens.access_token;
     if (newTokens.refresh_token) {
       session.refreshToken = newTokens.refresh_token;
     }

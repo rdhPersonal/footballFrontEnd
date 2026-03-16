@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export interface SessionData {
   idToken: string;
-  accessToken: string;
   refreshToken: string;
   expiresAt: number;
 }
